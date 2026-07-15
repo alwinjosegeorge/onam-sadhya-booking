@@ -1113,7 +1113,7 @@ Please confirm my booking and payment details. Thank you!`;
                           <input
                             type="text"
                             required
-                            placeholder="Anjali Menon"
+                            placeholder="Enter your name"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full rounded-xl border border-[#EAE6DF] bg-[#FAF9F6] px-4 py-3 text-xs text-primary focus:border-gold focus:outline-none"
@@ -1124,9 +1124,16 @@ Please confirm my booking and payment details. Thank you!`;
                           <input
                             type="tel"
                             required
-                            placeholder="+91 98470 00000"
+                            placeholder="Enter 10-digit number"
+                            pattern="[0-9]{10}"
+                            maxLength={10}
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, "");
+                              if (val.length <= 10) {
+                                setPhone(val);
+                              }
+                            }}
                             className="w-full rounded-xl border border-[#EAE6DF] bg-[#FAF9F6] px-4 py-3 text-xs text-primary focus:border-gold focus:outline-none"
                           />
                         </div>
