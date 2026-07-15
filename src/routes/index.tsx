@@ -1343,7 +1343,7 @@ Please confirm my booking and payment details. Thank you!`;
                   }}
                   className="w-full sm:w-auto bg-[#1E4D3A] hover:bg-[#163a2c] text-white px-8 py-4 rounded-full font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition duration-200 cursor-pointer shadow-md"
                 >
-                  Proceed to Book Sadya
+                  {detailPkg === "celebration" ? "Proceed to Book Celebration" : "Proceed to Book Sadya"}
                   <ArrowRight className="h-4 w-4" />
                 </button>
               </div>
