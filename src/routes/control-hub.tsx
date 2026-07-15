@@ -192,6 +192,10 @@ function AdminPage() {
       alert("Please fill in Name and Phone number");
       return;
     }
+    if (newBooking.phone.length !== 10) {
+      alert("Please enter a valid 10-digit phone number");
+      return;
+    }
 
     const price = newBooking.package === "dinein" ? 499 : newBooking.package === "delivery" ? 599 : 1299;
     const total = price * newBooking.qty;
@@ -901,8 +905,13 @@ function AdminPage() {
                   type="tel"
                   required
                   value={newBooking.phone}
-                  onChange={(e) => setNewBooking({ ...newBooking, phone: e.target.value })}
-                  placeholder="Enter phone"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                    setNewBooking({ ...newBooking, phone: val });
+                  }}
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  placeholder="Enter 10-digit number"
                   className="w-full rounded-xl border border-gold/20 bg-card px-3 py-2 text-sm text-primary placeholder:text-muted-foreground/50 focus:border-gold focus:outline-none"
                 />
               </div>
