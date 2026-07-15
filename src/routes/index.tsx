@@ -277,9 +277,11 @@ function OnamBookingApp() {
   }, []);
 
   // Video Playlist Configuration
-  const VIDEOS = useMemo(() => [
-    `${import.meta.env.BASE_URL}lv_0_20260715160043.mp4`
-  ], []);
+  const VIDEOS = useMemo(() => {
+    const base = import.meta.env.BASE_URL || "/";
+    const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
+    return [`${cleanBase}/lv_0_20260715160043.mp4`];
+  }, []);
 
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
@@ -593,6 +595,7 @@ Please confirm my booking and payment details. Thank you!`;
               src={src}
               muted
               playsInline
+              autoPlay
               loop={VIDEOS.length === 1}
               onEnded={() => {
                 if (isCurrent) {
