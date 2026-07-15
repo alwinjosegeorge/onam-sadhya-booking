@@ -38,6 +38,7 @@ interface Booking {
   status: "confirmed" | "cancelled";
   address?: string;
   createdAt: string;
+  paymentId?: string;
 }
 
 const TIME_SLOTS = [
@@ -224,7 +225,7 @@ function AdminPage() {
 
   // Export to CSV
   const exportToCSV = () => {
-    const headers = ["Booking ID", "Name", "Phone", "Package", "Date", "Slot", "Quantity", "Total (INR)", "Status", "Created At"];
+    const headers = ["Booking ID", "Name", "Phone", "Package", "Date", "Slot", "Quantity", "Total (INR)", "Status", "Razorpay Payment ID", "Created At"];
     const rows = bookings.map((b) => [
       b.id,
       b.name,
@@ -235,6 +236,7 @@ function AdminPage() {
       b.qty,
       b.total,
       b.status,
+      b.paymentId || "-",
       new Date(b.createdAt).toLocaleString(),
     ]);
 
@@ -304,7 +306,8 @@ function AdminPage() {
       const matchesSearch =
         b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.phone.includes(searchQuery) ||
-        b.id.toLowerCase().includes(searchQuery.toLowerCase());
+        b.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (b.paymentId && b.paymentId.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesStatus = statusFilter === "all" || b.status === statusFilter;
       const matchesPackage = b.package === activeBookingTab;
       return matchesSearch && matchesStatus && matchesPackage;
@@ -714,7 +717,14 @@ function AdminPage() {
                     ) : (
                       filteredBookings.map((b) => (
                         <tr key={b.id} className="border-b border-gold/5 hover:bg-card/30 transition">
-                          <td className="py-3.5 px-2 font-semibold font-display text-primary">{b.id}</td>
+                          <td className="py-3.5 px-2">
+                            <p className="font-semibold font-display text-primary">{b.id}</p>
+                            {b.paymentId && (
+                              <p className="text-[9px] font-mono text-gold-dark mt-0.5" title="Razorpay Payment ID">
+                                💳 {b.paymentId}
+                              </p>
+                            )}
+                          </td>
                           <td className="py-3.5 px-2">
                             <p className="font-semibold text-primary">{b.name}</p>
                             <p className="text-[10px] text-muted-foreground mt-0.5">{b.phone}</p>
@@ -776,7 +786,14 @@ function AdminPage() {
                   filteredBookings.map((b) => (
                     <article key={b.id} className="bg-card/45 rounded-2xl p-4 border border-gold/10 space-y-3 shadow-sm hover:shadow-md transition">
                       <div className="flex items-center justify-between border-b border-gold/5 pb-2.5">
-                        <span className="font-semibold text-primary font-display text-sm">{b.id}</span>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-primary font-display text-sm">{b.id}</span>
+                          {b.paymentId && (
+                            <span className="text-[9px] font-mono text-gold-dark mt-0.5" title="Razorpay Payment ID">
+                              💳 {b.paymentId}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <span
                             className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${

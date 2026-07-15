@@ -239,6 +239,7 @@ interface Booking {
   status: "confirmed" | "cancelled";
   address?: string;
   createdAt: string;
+  paymentId?: string;
 }
 
 function OnamBookingApp() {
@@ -422,6 +423,7 @@ function OnamBookingApp() {
       status: "confirmed",
       address: pkg === "delivery" ? address.trim() : undefined,
       createdAt: new Date().toISOString(),
+      paymentId: paymentId,
     };
 
     const updatedBookings = [newBooking, ...bookings];
