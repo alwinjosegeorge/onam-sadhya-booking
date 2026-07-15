@@ -240,6 +240,8 @@ interface Booking {
   address?: string;
   createdAt: string;
   paymentId?: string;
+  token: string;
+  checkedIn?: boolean;
 }
 
 function OnamBookingApp() {
@@ -426,6 +428,8 @@ function OnamBookingApp() {
       address: pkg === "delivery" ? address.trim() : undefined,
       createdAt: new Date().toISOString(),
       paymentId: paymentId,
+      token: "TK-" + Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.floor(1000 + Math.random() * 9000),
+      checkedIn: false,
     };
 
     const updatedBookings = [newBooking, ...bookings];
@@ -1586,13 +1590,7 @@ Please present this QR code at entry. Thank you!`;
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
                     JSON.stringify({
                       bookingId: createdBooking.id,
-                      name: createdBooking.name,
-                      phone: createdBooking.phone,
-                      package: createdBooking.package,
-                      date: createdBooking.date,
-                      qty: createdBooking.qty,
-                      total: createdBooking.total,
-                      paymentId: createdBooking.paymentId
+                      token: createdBooking.token,
                     })
                   )}`}
                   alt="Entry Ticket QR"

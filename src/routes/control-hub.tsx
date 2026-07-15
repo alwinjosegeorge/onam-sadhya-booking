@@ -80,6 +80,15 @@ function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "confirmed" | "cancelled">("all");
   const [activeBookingTab, setActiveBookingTab] = useState<"dinein" | "delivery" | "celebration">("dinein");
+  
+  // Scanner states
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerResult, setScannerResult] = useState<{
+    status: "success" | "error" | "duplicate";
+    message: string;
+    booking?: Booking;
+  } | null>(null);
+  const [scannerInst, setScannerInst] = useState<any>(null);
 
   // Read session auth on mount and load storage items
   useEffect(() => {
@@ -212,6 +221,8 @@ function AdminPage() {
       status: "confirmed",
       address: newBooking.package === "delivery" ? newBooking.address : undefined,
       createdAt: new Date().toISOString(),
+      token: "TK-" + Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.floor(1000 + Math.random() * 9000),
+      checkedIn: false,
     };
 
     saveBookings([b, ...bookings]);
@@ -225,6 +236,133 @@ function AdminPage() {
       qty: 2,
       address: "",
     });
+  };
+ 
+  // Scanner helper functions
+  const handleOpenScanner = () => {
+    setShowScanner(true);
+    setScannerResult(null);
+
+    // Dynamically load html5-qrcode library from CDN if not loaded
+    if (typeof (window as any).Html5Qrcode === "undefined") {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/html5-qrcode";
+      script.async = true;
+      script.onload = () => {
+        startScanner();
+      };
+      document.body.appendChild(script);
+    } else {
+      setTimeout(() => {
+        startScanner();
+      }, 300);
+    }
+  };
+
+  const startScanner = () => {
+    if (typeof (window as any).Html5Qrcode === "undefined") return;
+    try {
+      const html5Qrcode = new (window as any).Html5Qrcode("admin-scanner-view");
+      setScannerInst(html5Qrcode);
+      html5Qrcode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: (width: number, height: number) => {
+            return {
+              width: Math.min(width * 0.7, 240),
+              height: Math.min(height * 0.7, 240),
+            };
+          },
+        },
+        (qrText: string) => {
+          html5Qrcode.stop().then(() => {
+            handleScanSuccess(qrText);
+          }).catch((err) => {
+            console.error("Error stopping scanner:", err);
+            handleScanSuccess(qrText);
+          });
+        },
+        (error: any) => {
+          // Silent frame read error callback
+        }
+      ).catch((err) => {
+        console.error("Error starting scanner:", err);
+      });
+    } catch (e) {
+      console.error("Scanner exception:", e);
+    }
+  };
+
+  const handleCloseScanner = () => {
+    if (scannerInst) {
+      try {
+        scannerInst.stop().catch(() => {});
+      } catch (e) {}
+      setScannerInst(null);
+    }
+    setShowScanner(false);
+    setScannerResult(null);
+  };
+
+  const handleScanSuccess = (qrText: string) => {
+    try {
+      const data = JSON.parse(qrText);
+      const bId = data.bookingId;
+      const bToken = data.token;
+
+      // Find matched booking from state
+      const matched = bookings.find((b) => b.id === bId);
+
+      if (!matched) {
+        setScannerResult({
+          status: "error",
+          message: `Ticket not found in system database. (ID: ${bId || "Unknown"})`,
+        });
+        return;
+      }
+
+      // Check validation token to prevent fraud
+      if (matched.token !== bToken) {
+        setScannerResult({
+          status: "error",
+          message: "Verification failed! Security token is invalid or faked.",
+          booking: matched,
+        });
+        return;
+      }
+
+      // Check if ticket has already been checked-in
+      if (matched.checkedIn) {
+        setScannerResult({
+          status: "duplicate",
+          message: "Duplicate scan! This ticket was already checked in.",
+          booking: matched,
+        });
+        return;
+      }
+
+      // Success
+      setScannerResult({
+        status: "success",
+        message: "Ticket verified successfully!",
+        booking: matched,
+      });
+    } catch (e) {
+      setScannerResult({
+        status: "error",
+        message: "Invalid QR Code format. Please scan a valid Onam booking QR ticket.",
+      });
+    }
+  };
+
+  const markCheckedIn = (bookingId: string) => {
+    const updated = bookings.map((b) =>
+      b.id === bookingId ? { ...b, checkedIn: true } : b
+    );
+    saveBookings(updated);
+    setScannerResult(null);
+    setShowScanner(false);
   };
 
   // Export to CSV
@@ -455,6 +593,12 @@ function AdminPage() {
               className="glass-card flex items-center gap-2.5 rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-primary hover:border-gold/40 hover:scale-102 transition cursor-pointer shadow-sm"
             >
               <Download className="h-4 w-4 text-gold" /> Export CSV
+            </button>
+            <button
+              onClick={handleOpenScanner}
+              className="flex items-center gap-2.5 rounded-full bg-leaf px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-white shadow-md hover:scale-105 active:scale-98 transition duration-300 cursor-pointer"
+            >
+              <Search className="h-4 w-4 text-white" /> Scan Ticket
             </button>
             <button
               onClick={() => setShowAddForm(true)}
@@ -744,7 +888,7 @@ function AdminPage() {
                           )}
                           <td className="py-3.5 px-2 font-medium">{b.qty} pax</td>
                           <td className="py-3.5 px-2 font-semibold">₹{b.total.toLocaleString("en-IN")}</td>
-                          <td className="py-3.5 px-2">
+                          <td className="py-3.5 px-2 flex flex-col gap-1 items-start">
                             <span
                               className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
                                 b.status === "confirmed"
@@ -754,6 +898,11 @@ function AdminPage() {
                             >
                               {b.status}
                             </span>
+                            {b.checkedIn && (
+                              <span className="inline-block rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider">
+                                Checked In
+                              </span>
+                            )}
                           </td>
                           <td className="py-3.5 px-2 text-right">
                             {b.status === "confirmed" ? (
@@ -798,7 +947,12 @@ function AdminPage() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                          {b.checkedIn && (
+                            <span className="inline-block rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider">
+                              Checked In
+                            </span>
+                          )}
                           <span
                             className={`inline-block rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
                               b.status === "confirmed"
@@ -991,6 +1145,136 @@ function AdminPage() {
                 Add Reservation
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Scanner Overlay Modal */}
+      {showScanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-[360px] bg-card rounded-[32px] border border-gold/20 shadow-2xl p-6 flex flex-col items-center text-center overflow-hidden">
+            {/* Top gold line */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-gold via-[#EAE6DF] to-gold" />
+            
+            <button
+              onClick={handleCloseScanner}
+              className="absolute right-5 top-5 grid h-9 w-9 place-items-center rounded-full bg-muted text-primary hover:bg-gold/10 transition cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            
+            <h3 className="mt-4 font-display text-lg font-semibold text-primary">Ticket Validator</h3>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5 mb-6">Scan Booking Entry QR Code</p>
+            
+            {/* Viewfinder element */}
+            {!scannerResult ? (
+              <div className="w-full max-w-[280px] aspect-square mx-auto overflow-hidden rounded-2xl border border-gold/20 bg-black flex items-center justify-center relative">
+                <div id="admin-scanner-view" className="w-full h-full" />
+                <div className="absolute inset-0 border-2 border-dashed border-gold/40 rounded-2xl pointer-events-none animate-pulse" />
+              </div>
+            ) : (
+              /* Verification Results Display */
+              <div className="w-full space-y-4">
+                {scannerResult.status === "success" && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-14 h-14 rounded-full bg-leaf/10 border border-leaf/30 flex items-center justify-center text-leaf animate-bounce">
+                      <CheckCircle className="w-7 h-7 stroke-[3]" />
+                    </div>
+                    <h4 className="mt-3 font-bold text-leaf uppercase tracking-wider text-xs">Valid Entry Ticket</h4>
+                    <p className="text-[10.5px] text-muted-foreground mt-1">{scannerResult.message}</p>
+                    
+                    {scannerResult.booking && (
+                      <div className="mt-5 w-full bg-[#FAF9F6] border border-[#EAE6DF] rounded-2xl p-4 text-left text-xs space-y-2">
+                        <div className="flex justify-between border-b border-gold/5 pb-1.5">
+                          <span className="text-muted-foreground">Booking ID</span>
+                          <span className="font-bold text-primary font-display">{scannerResult.booking.id}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Customer</span>
+                          <span className="font-bold text-primary">{scannerResult.booking.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Phone</span>
+                          <span className="font-semibold text-primary">{scannerResult.booking.phone}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Package</span>
+                          <span className="font-bold text-primary capitalize">{scannerResult.booking.package}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Quantity</span>
+                          <span className="font-bold text-primary">{scannerResult.booking.qty} Pax</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <button
+                      onClick={() => scannerResult.booking && markCheckedIn(scannerResult.booking.id)}
+                      className="mt-6 w-full bg-leaf hover:bg-[#163a2c] text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                    >
+                      Approve & Check In
+                    </button>
+                  </div>
+                )}
+
+                {scannerResult.status === "duplicate" && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-14 h-14 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center text-gold animate-shake">
+                      <AlertTriangle className="w-7 h-7 stroke-[3]" />
+                    </div>
+                    <h4 className="mt-3 font-bold text-gold-dark uppercase tracking-wider text-xs">Duplicate Ticket Warning</h4>
+                    <p className="text-[10.5px] text-muted-foreground mt-1">{scannerResult.message}</p>
+                    
+                    {scannerResult.booking && (
+                      <div className="mt-5 w-full bg-[#FAF9F6] border border-[#EAE6DF] rounded-2xl p-4 text-left text-xs space-y-2">
+                        <div className="flex justify-between border-b border-gold/5 pb-1.5">
+                          <span className="text-muted-foreground">Booking ID</span>
+                          <span className="font-bold text-primary font-display">{scannerResult.booking.id}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Customer</span>
+                          <span className="font-bold text-primary">{scannerResult.booking.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Status</span>
+                          <span className="font-bold text-emerald-600 uppercase text-[9px] tracking-wider bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Checked In</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <button
+                      onClick={handleCloseScanner}
+                      className="mt-6 w-full bg-primary text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                    >
+                      Close Scanner
+                    </button>
+                  </div>
+                )}
+
+                {scannerResult.status === "error" && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-14 h-14 rounded-full bg-maroon/10 border border-maroon/30 flex items-center justify-center text-maroon animate-shake">
+                      <X className="w-7 h-7 stroke-[3]" />
+                    </div>
+                    <h4 className="mt-3 font-bold text-maroon uppercase tracking-wider text-xs">Invalid Entry Ticket</h4>
+                    <p className="text-[10.5px] text-muted-foreground mt-1 max-w-[240px] leading-normal">{scannerResult.message}</p>
+                    
+                    <button
+                      onClick={() => setScannerResult(null)}
+                      className="mt-6 w-full bg-primary text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+                    >
+                      Try Scanning Again
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {!scannerResult && (
+              <p className="mt-6 text-[10px] text-muted-foreground font-semibold">
+                Point camera at customer's booking QR Code ticket.
+              </p>
+            )}
           </div>
         </div>
       )}
