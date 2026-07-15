@@ -274,6 +274,15 @@ function OnamBookingApp() {
     if (storedBookings) setBookings(JSON.parse(storedBookings));
     if (storedClosedDates) setClosedDates(JSON.parse(storedClosedDates));
     if (storedClosedSlots) setClosedSlots(JSON.parse(storedClosedSlots));
+
+    // Load Razorpay script dynamically
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
   }, []);
 
   // Video Playlist Configuration
@@ -290,6 +299,7 @@ function OnamBookingApp() {
     // Play the current video index, pause the others
     videoRefs.current.forEach((video, idx) => {
       if (!video) return;
+      video.muted = true; // Force muted programmatically to bypass React 19 hydration autoplay block
       if (idx === currentVideoIndex) {
         video.currentTime = 0; // reset to start
         const playPromise = video.play();
@@ -397,38 +407,7 @@ function OnamBookingApp() {
       router.navigate({ to: "/gallery" });
     }
   };
-
-  const handleReserve = () => {
-    if (closedDates.includes(date)) {
-      alert("This date is closed for bookings.");
-      return;
-    }
-    if (pkg === "dinein" && closedSlots.includes(`${date}-${slot}`)) {
-      alert("This seating slot is closed for bookings.");
-      return;
-    }
-     if (!name.trim()) {
-      alert("Please enter your name");
-      return;
-    }
-    if (!phone.trim() || phone.length < 10) {
-      alert("Please enter a valid phone number");
-      return;
-    }
-    if (!email.trim() || !email.includes("@")) {
-      alert("Please enter a valid email address");
-      return;
-    }
-    if (pkg === "delivery" && !address.trim()) {
-      alert("Please enter your delivery address");
-      return;
-    }
-
-    if (capacityInfo.remaining < qty) {
-      alert(`Only ${capacityInfo.remaining} slots/tickets remaining for this selection.`);
-      return;
-    }
-
+  const completeBooking = (paymentId: string) => {
     // Create a new booking
     const newBooking: Booking = {
       id: "OB-" + Math.floor(100000 + Math.random() * 900000),
@@ -463,8 +442,9 @@ function OnamBookingApp() {
 - Date: ${dateStr}${slotStr}${addressStr}
 - Guests/Qty: ${qty} Pax
 - Total Amount: ₹${total.toLocaleString("en-IN")}
+- Payment Status: PAID (Razorpay ID: ${paymentId})
 
-Please confirm my booking and payment details. Thank you!`;
+Please confirm my booking. Thank you!`;
 
     const encodedText = encodeURIComponent(message);
     window.open(`https://wa.me/919072611622?text=${encodedText}`, "_blank");
@@ -476,6 +456,74 @@ Please confirm my booking and payment details. Thank you!`;
     setAddress("");
     setStep(1);
     setSubStep(1);
+  };
+
+  const handleReserve = () => {
+    if (closedDates.includes(date)) {
+      alert("This date is closed for bookings.");
+      return;
+    }
+    if (pkg === "dinein" && closedSlots.includes(`${date}-${slot}`)) {
+      alert("This seating slot is closed for bookings.");
+      return;
+    }
+     if (!name.trim()) {
+      alert("Please enter your name");
+      return;
+    }
+    if (!phone.trim() || phone.length < 10) {
+      alert("Please enter a valid phone number");
+      return;
+    }
+    if (!email.trim() || !email.includes("@")) {
+      alert("Please enter a valid email address");
+      return;
+    }
+    if (pkg === "delivery" && !address.trim()) {
+      alert("Please enter your delivery address");
+      return;
+    }
+
+    if (capacityInfo.remaining < qty) {
+      alert(`Only ${capacityInfo.remaining} slots/tickets remaining for this selection.`);
+      return;
+    }
+
+    // Trigger Razorpay Checkout
+    if (typeof window !== "undefined" && (window as any).Razorpay) {
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_rB8E3UvL8vD3d2", // Test Key fallback
+        amount: total * 100, // Amount in paise
+        currency: "INR",
+        name: "Kadambrayar Onachamayam",
+        description: `${pkg === "dinein" ? "Dine-In Sadhya" : pkg === "delivery" ? "Sadhya at Home" : "Onachamayam Celebration"} Booking`,
+        image: logoImg,
+        handler: function (response: any) {
+          if (response.razorpay_payment_id) {
+            completeBooking(response.razorpay_payment_id);
+          } else {
+            alert("Payment failed or cancelled. Please try again.");
+          }
+        },
+        prefill: {
+          name: name.trim(),
+          email: email.trim(),
+          contact: phone.trim(),
+        },
+        notes: {
+          package: pkg,
+          date: date,
+          guests: qty,
+        },
+        theme: {
+          color: "#1E4D3A", // Forest green theme
+        },
+      };
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } else {
+      alert("Payment gateway failed to load. Please check your internet connection and reload the page.");
+    }
   };
 
   const accordionHeader = (
