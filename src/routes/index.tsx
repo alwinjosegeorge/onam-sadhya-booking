@@ -255,6 +255,8 @@ function OnamBookingApp() {
   const [subStep, setSubStep] = useState(1); // 1 = Date, 2 = Package, 3 = Slot, 4 = Guests
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailPkg, setDetailPkg] = useState<PackageKey>("dinein");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
 
   // Customer Details Form State
   const [name, setName] = useState("");
@@ -430,34 +432,51 @@ function OnamBookingApp() {
     setBookings(updatedBookings);
     localStorage.setItem("onam_bookings", JSON.stringify(updatedBookings));
 
-    // Construct WhatsApp message
-    const pkgName = pkg === "dinein" ? "Onam Sadhya - Dine-In" : pkg === "delivery" ? "Sadhya - Home Delivery" : "One Day Onam Celebration";
-    const dateStr = `August ${date}, 2026`;
-    const slotStr = pkg === "dinein" ? `\n- Seating Slot: ${slot}` : "";
-    const addressStr = pkg === "delivery" ? `\n- Delivery Address: ${address.trim()}` : "";
-    const message = `Namaskaram! I would like to book a Sadhya package:
-- Booking ID: ${newBooking.id}
-- Customer Name: ${name.trim()}
-- Phone Number: ${phone.trim()}
-- Email Address: ${email.trim()}
-- Package: ${pkgName}
-- Date: ${dateStr}${slotStr}${addressStr}
-- Guests/Qty: ${qty} Pax
-- Total Amount: ₹${total.toLocaleString("en-IN")}
-- Payment Status: PAID (Razorpay ID: ${paymentId})
+    // Show the success modal with QR ticket
+    setCreatedBooking(newBooking);
+    setShowSuccessModal(true);
+  };
 
-Please confirm my booking. Thank you!`;
-
-    const encodedText = encodeURIComponent(message);
-    window.open(`https://wa.me/919072611622?text=${encodedText}`, "_blank");
-
-    // Clear form details and reset wizard
+  const handleDismissSuccessModal = () => {
+    setShowSuccessModal(false);
+    setCreatedBooking(null);
     setName("");
     setPhone("");
     setEmail("");
     setAddress("");
     setStep(1);
     setSubStep(1);
+  };
+
+  const handleSendWhatsAppTicket = (b: Booking) => {
+    const pkgName = b.package === "dinein" ? "Onam Sadhya - Dine-In" : b.package === "delivery" ? "Sadhya - Home Delivery" : "One Day Onam Celebration";
+    const dateStr = `August ${b.date}, 2026`;
+    const slotStr = b.package === "dinein" ? `\n- Seating Slot: ${b.slot}` : "";
+    const addressStr = b.package === "delivery" ? `\n- Delivery Address: ${b.address}` : "";
+    
+    // Scannable QR Ticket endpoint containing booking details
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+      JSON.stringify({ bookingId: b.id, name: b.name, phone: b.phone, package: b.package, date: b.date, qty: b.qty, total: b.total, paymentId: b.paymentId })
+    )}`;
+
+    const message = `Namaskaram! My Onam Sadhya Booking has been confirmed:
+- Booking ID: ${b.id}
+- Customer Name: ${b.name}
+- Phone Number: ${b.phone}
+- Email Address: ${b.email || "-"}
+- Package: ${pkgName}
+- Date: ${dateStr}${slotStr}${addressStr}
+- Guests/Qty: ${b.qty} Pax
+- Total Amount: ₹${b.total.toLocaleString("en-IN")}
+- Payment Status: PAID (Razorpay ID: ${b.paymentId})
+
+Open QR Ticket Link:
+${qrUrl}
+
+Please present this QR code at entry. Thank you!`;
+
+    const encodedText = encodeURIComponent(message);
+    window.open(`https://wa.me/919072611622?text=${encodedText}`, "_blank");
   };
 
   const handleReserve = () => {
@@ -1542,6 +1561,102 @@ Please confirm my booking. Thank you!`;
           })}
         </div>
       </nav>
+
+      {/* Success QR Ticket Modal */}
+      {showSuccessModal && createdBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          {/* Main Card */}
+          <div className="relative w-full max-w-[360px] bg-card rounded-[32px] border border-gold/20 shadow-2xl p-6 flex flex-col items-center text-center overflow-hidden animate-scale-up">
+            {/* Background design */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-gold via-[#EAE6DF] to-gold" />
+            
+            {/* Success Icon */}
+            <div className="mt-4 w-14 h-14 rounded-full bg-leaf/10 border border-leaf/30 flex items-center justify-center text-leaf animate-bounce">
+              <Check className="w-7 h-7 stroke-[3]" />
+            </div>
+            
+            <h3 className="mt-4 font-display text-xl font-bold text-primary">Booking Confirmed!</h3>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5">Your Onam Sadhya entry pass</p>
+            
+            {/* Ticket QR Section */}
+            <div className="mt-6 w-full bg-[#FAF9F6] border border-[#EAE6DF] rounded-[24px] p-5 flex flex-col items-center">
+              <span className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-widest mb-3">Gate Entry QR Code</span>
+              <div className="relative w-44 h-44 bg-white border border-[#EAE6DF] rounded-2xl p-2 flex items-center justify-center shadow-sm">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                    JSON.stringify({
+                      bookingId: createdBooking.id,
+                      name: createdBooking.name,
+                      phone: createdBooking.phone,
+                      package: createdBooking.package,
+                      date: createdBooking.date,
+                      qty: createdBooking.qty,
+                      total: createdBooking.total,
+                      paymentId: createdBooking.paymentId
+                    })
+                  )}`}
+                  alt="Entry Ticket QR"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <p className="mt-3 text-[9px] text-primary/70 font-semibold max-w-[200px] leading-normal">
+                Please present this QR ticket at check-in or delivery.
+              </p>
+            </div>
+
+            {/* Ticket Details */}
+            <div className="mt-5 w-full text-left text-xs space-y-2.5 px-1 border-t border-dashed border-secondary/20 pt-4">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground uppercase tracking-wider text-[8px] font-bold">Booking ID</span>
+                <span className="font-extrabold text-primary font-display">{createdBooking.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground uppercase tracking-wider text-[8px] font-bold">Customer</span>
+                <span className="font-bold text-primary">{createdBooking.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground uppercase tracking-wider text-[8px] font-bold">Date & Time</span>
+                <span className="font-bold text-primary">
+                  Aug {createdBooking.date}, 2026 {createdBooking.slot ? `(${createdBooking.slot})` : ""}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground uppercase tracking-wider text-[8px] font-bold">Package</span>
+                <span className="font-bold text-primary capitalize">
+                  {createdBooking.package === "dinein" ? "Dine-In" : createdBooking.package === "delivery" ? "Home Delivery" : "Celebration"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground uppercase tracking-wider text-[8px] font-bold">Quantity</span>
+                <span className="font-bold text-primary">
+                  {createdBooking.qty} {createdBooking.package === "delivery" ? "Sadhyas" : "Guests"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center border-t border-gold/10 pt-2.5 mt-2">
+                <span className="text-primary font-extrabold uppercase tracking-wider text-[9px]">Total Paid</span>
+                <span className="font-display text-base font-black text-primary">₹{createdBooking.total.toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="mt-6 w-full space-y-2.5">
+              <button
+                onClick={() => handleSendWhatsAppTicket(createdBooking)}
+                className="w-full bg-[#1E4D3A] hover:bg-[#163a2c] text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition duration-200 cursor-pointer shadow-md"
+              >
+                Send Ticket to WhatsApp
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={handleDismissSuccessModal}
+                className="w-full text-muted-foreground hover:text-primary py-2 text-xs font-bold uppercase tracking-wider transition cursor-pointer"
+              >
+                Close & Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
