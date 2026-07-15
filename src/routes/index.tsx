@@ -629,7 +629,7 @@ Please confirm my booking and payment details. Thank you!`;
             <div>
               <p className="font-display text-sm md:text-base font-bold leading-none text-ivory uppercase tracking-tight">Kadambrayar</p>
               <p className="text-[8px] md:text-[9px] tracking-[0.25em] text-gold uppercase mt-1.5 font-semibold">
-                Nature Resort
+                Onachamayam
               </p>
             </div>
           </div>
