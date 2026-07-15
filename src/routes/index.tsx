@@ -177,7 +177,7 @@ const PACKAGE_DETAILS_CONTENT: Record<
   },
   celebration: {
     title: "Kadambrayar Onachamayam",
-    subtitle: "6 Hours of Fun & Celebration",
+    subtitle: "10:30 AM to 5:00 PM",
     description: "A vibrant Onam celebration that brings together Kerala's rich traditions, festive spirit, and authentic hospitality in a picturesque riverside setting. Perfect for loved ones, families, schools, colleges, and corporate groups.",
     price: 1299,
     banner: celebrationImg,
@@ -875,7 +875,7 @@ Please confirm my booking and payment details. Thank you!`;
                       </li>
                       <li className="flex items-center gap-2 text-xs font-semibold text-primary/70">
                         <Leaf className="h-3.5 w-3.5 text-leaf fill-leaf/10 shrink-0" />
-                        9 AM to 6 PM
+                        10:30 AM to 5:00 PM
                       </li>
                     </ul>
                   </div>
