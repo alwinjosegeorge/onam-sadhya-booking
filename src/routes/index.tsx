@@ -1053,27 +1053,48 @@ Please confirm my booking and payment details. Thank you!`;
                   {/* Step 4: How many guests? */}
                   {accordionHeader(
                     4,
-                    "How many guests?",
-                    `${qty} Guests`,
+                    pkg === "delivery" ? "How many sadhya?" : "How many guests?",
+                    pkg === "delivery" ? `${qty} Sadhya` : `${qty} Guests`,
                     subStep === 4,
                     true
                   )}
                   {subStep === 4 && (
                     <div className="p-6 border-b border-secondary/20 bg-white">
                       <div className="flex flex-col items-center gap-4 py-2">
-                        <div className="flex items-center justify-between border border-[#EAE6DF] rounded-2xl p-2.5 bg-[#FAF9F6] w-full max-w-[200px]">
+                        <div className="flex items-center justify-between border border-[#EAE6DF] rounded-2xl p-2.5 bg-[#FAF9F6] w-full max-w-[240px]">
                           <button
                             type="button"
                             onClick={() => setQty(Math.max(1, qty - 1))}
-                            className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary border border-secondary/20 shadow-sm transition hover:scale-105 cursor-pointer font-bold"
+                            className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary border border-secondary/20 shadow-sm transition hover:scale-105 cursor-pointer font-bold shrink-0"
                           >
                             –
                           </button>
-                          <span className="text-xs font-extrabold text-primary w-12 text-center">{qty} guests</span>
+                          
+                          <div className="flex flex-col items-center flex-1">
+                            <input
+                              type="number"
+                              min={1}
+                              max={capacityInfo.remaining}
+                              value={qty || ""}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val)) {
+                                  setQty(Math.max(1, Math.min(capacityInfo.remaining, val)));
+                                } else {
+                                  setQty(1);
+                                }
+                              }}
+                              className="w-20 text-center text-base font-black bg-transparent border-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-primary"
+                            />
+                            <span className="text-[7.5px] text-muted-foreground uppercase tracking-widest font-extrabold -mt-0.5">
+                              {pkg === "delivery" ? "sadhyas" : "guests"}
+                            </span>
+                          </div>
+
                           <button
                             type="button"
-                            onClick={() => setQty(Math.min(20, qty + 1))}
-                            className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary border border-secondary/20 shadow-sm transition hover:scale-105 cursor-pointer font-bold"
+                            onClick={() => setQty(Math.min(capacityInfo.remaining, qty + 1))}
+                            className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary border border-secondary/20 shadow-sm transition hover:scale-105 cursor-pointer font-bold shrink-0"
                           >
                             +
                           </button>
@@ -1082,7 +1103,7 @@ Please confirm my booking and payment details. Thank you!`;
                         <button
                           type="button"
                           onClick={() => setSubStep(5)}
-                          className="mt-2 w-full max-w-[200px] py-3.5 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-102 transition shadow-md cursor-pointer"
+                          className="mt-2 w-full max-w-[240px] py-3.5 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-102 transition shadow-md cursor-pointer"
                         >
                           Continue
                         </button>
