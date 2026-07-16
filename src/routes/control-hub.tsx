@@ -81,7 +81,7 @@ function AdminPage() {
     package: "dinein" as "dinein" | "delivery" | "celebration",
     date: 26,
     slot: "12:00 PM",
-    qty: 2,
+    qty: "" as unknown as number,
     address: "",
   });
 
@@ -295,8 +295,20 @@ function AdminPage() {
       return;
     }
 
+    const qtyInt = parseInt(newBooking.qty as any) || 0;
+    if (qtyInt <= 0) {
+      alert("Please enter a valid quantity greater than 0");
+      return;
+    }
+
+    const maxQty = newBooking.package === "dinein" ? 200 : 600;
+    if (qtyInt > maxQty) {
+      alert(`Maximum quantity allowed for ${newBooking.package === "dinein" ? "Dine-In" : newBooking.package === "delivery" ? "Delivery" : "Event"} is ${maxQty}`);
+      return;
+    }
+
     const price = newBooking.package === "dinein" ? 499 : newBooking.package === "delivery" ? 599 : 1299;
-    const total = price * newBooking.qty;
+    const total = price * qtyInt;
 
     const b: Booking = {
       id: "OB-" + Math.floor(100000 + Math.random() * 900000),
@@ -305,7 +317,7 @@ function AdminPage() {
       package: newBooking.package,
       date: newBooking.date,
       slot: newBooking.package === "dinein" ? newBooking.slot : undefined,
-      qty: newBooking.qty,
+      qty: qtyInt,
       total,
       status: "confirmed",
       address: newBooking.package === "delivery" ? newBooking.address : undefined,
@@ -325,7 +337,7 @@ function AdminPage() {
       package: "dinein",
       date: 26,
       slot: "12:00 PM",
-      qty: 2,
+      qty: "" as unknown as number,
       address: "",
     });
   };
@@ -1555,9 +1567,13 @@ function AdminPage() {
                 <input
                   type="number"
                   min={1}
-                  max={200}
+                  max={newBooking.package === "dinein" ? 200 : 600}
+                  placeholder={`Enter quantity (Max ${newBooking.package === "dinein" ? 200 : 600})`}
                   value={newBooking.qty}
-                  onChange={(e) => setNewBooking({ ...newBooking, qty: parseInt(e.target.value) || 1 })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewBooking({ ...newBooking, qty: val === "" ? "" as any : parseInt(val) || 0 });
+                  }}
                   className="w-full rounded-xl border border-gold/20 bg-card px-3 py-2 text-sm text-primary focus:border-gold focus:outline-none"
                 />
               </div>
