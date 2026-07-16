@@ -301,9 +301,31 @@ function AdminPage() {
       return;
     }
 
-    const maxQty = newBooking.package === "dinein" ? 200 : 600;
-    if (qtyInt > maxQty) {
-      alert(`Maximum quantity allowed for ${newBooking.package === "dinein" ? "Dine-In" : newBooking.package === "delivery" ? "Delivery" : "Event"} is ${maxQty}`);
+    // Dynamic capacity calculation based on existing bookings
+    let remaining = 0;
+    if (newBooking.package === "dinein") {
+      const booked = bookings
+        .filter((b) => b.status === "confirmed" && b.package === "dinein" && b.date === newBooking.date && b.slot === newBooking.slot)
+        .reduce((sum, b) => sum + b.qty, 0);
+      remaining = Math.max(0, 200 - booked);
+    } else if (newBooking.package === "delivery") {
+      const booked = bookings
+        .filter((b) => b.status === "confirmed" && b.package === "delivery" && b.date === newBooking.date)
+        .reduce((sum, b) => sum + b.qty, 0);
+      remaining = Math.max(0, 600 - booked);
+    } else {
+      const booked = bookings
+        .filter((b) => b.status === "confirmed" && b.package === "celebration" && b.date === newBooking.date)
+        .reduce((sum, b) => sum + b.qty, 0);
+      remaining = Math.max(0, 600 - booked);
+    }
+
+    if (qtyInt > remaining) {
+      alert(
+        `Capacity limit exceeded. Only ${remaining} seats/orders remaining for this ${
+          newBooking.package === "dinein" ? "slot" : "day"
+        }. (You requested ${qtyInt})`
+      );
       return;
     }
 
@@ -1562,21 +1584,45 @@ function AdminPage() {
                 </div>
               )}
 
-              <div>
-                <label className="block font-display uppercase tracking-widest text-muted-foreground mb-1">Quantity (Guests)</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={newBooking.package === "dinein" ? 200 : 600}
-                  placeholder={`Enter quantity (Max ${newBooking.package === "dinein" ? 200 : 600})`}
-                  value={newBooking.qty}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setNewBooking({ ...newBooking, qty: val === "" ? "" as any : parseInt(val) || 0 });
-                  }}
-                  className="w-full rounded-xl border border-gold/20 bg-card px-3 py-2 text-sm text-primary focus:border-gold focus:outline-none"
-                />
-              </div>
+              {(() => {
+                let currentRemaining = 0;
+                if (newBooking.package === "dinein") {
+                  const booked = bookings
+                    .filter((b) => b.status === "confirmed" && b.package === "dinein" && b.date === newBooking.date && b.slot === newBooking.slot)
+                    .reduce((sum, b) => sum + b.qty, 0);
+                  currentRemaining = Math.max(0, 200 - booked);
+                } else if (newBooking.package === "delivery") {
+                  const booked = bookings
+                    .filter((b) => b.status === "confirmed" && b.package === "delivery" && b.date === newBooking.date)
+                    .reduce((sum, b) => sum + b.qty, 0);
+                  currentRemaining = Math.max(0, 600 - booked);
+                } else {
+                  const booked = bookings
+                    .filter((b) => b.status === "confirmed" && b.package === "celebration" && b.date === newBooking.date)
+                    .reduce((sum, b) => sum + b.qty, 0);
+                  currentRemaining = Math.max(0, 600 - booked);
+                }
+
+                return (
+                  <div>
+                    <label className="block font-display uppercase tracking-widest text-muted-foreground mb-1">
+                      Quantity (Guests) — <span className="font-bold text-gold">{currentRemaining}</span> seats remaining
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={currentRemaining}
+                      placeholder={`Enter quantity (Max ${currentRemaining})`}
+                      value={newBooking.qty}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewBooking({ ...newBooking, qty: val === "" ? "" as any : parseInt(val) || 0 });
+                      }}
+                      className="w-full rounded-xl border border-gold/20 bg-card px-3 py-2 text-sm text-primary focus:border-gold focus:outline-none"
+                    />
+                  </div>
+                );
+              })()}
 
               <button
                 type="submit"
