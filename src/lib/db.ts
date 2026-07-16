@@ -1,13 +1,11 @@
-import postgres from "postgres";
+import { neon } from "@neondatabase/serverless";
 
 const DATABASE_URL = 
   process.env.DATABASE_URL || 
   "postgresql://neondb_owner:npg_zblnHwWQj26J@ep-empty-tooth-azitpalq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
 
-// Initialize postgres client
-export const sql = postgres(DATABASE_URL, {
-  ssl: "require",
-});
+// Initialize SQL HTTP client
+export const sql = neon(DATABASE_URL);
 
 // Run initial migration to set up the tables
 export async function initDb() {
