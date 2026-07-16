@@ -1358,10 +1358,10 @@ Please present this QR code at entry. Thank you!`;
                     </div>
                   )}
 
-                  {/* Step 4: How many guests? */}
+                  {/* Step 4: No of Guest */}
                   {accordionHeader(
                     4,
-                    pkg === "delivery" ? "How many sadhya?" : "How many guests?",
+                    pkg === "delivery" ? "No of Sadhya" : "No of Guest",
                     qty ? (pkg === "delivery" ? `${qty} Sadhya` : `${qty} Guests`) : undefined,
                     subStep === 4,
                     date !== null && (pkg === "dinein" ? slot !== null : true)
