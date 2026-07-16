@@ -24,6 +24,9 @@ import {
   AlertTriangle,
   ArrowLeft,
   QrCode,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 
 import dineinImg from "@/assets/pkg-dinein.jpg";
@@ -88,6 +91,14 @@ function AdminPage() {
   // Search & filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "confirmed" | "cancelled">("all");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [selectedBookingDate, setSelectedBookingDate] = useState<number | "all">(() => {
+    const today = new Date();
+    if (today.getMonth() === 7 && today.getDate() >= 15 && today.getDate() <= 30) {
+      return today.getDate();
+    }
+    return 26; // Default to main Onam day (Aug 26)
+  });
   const [activeBookingTab, setActiveBookingTab] = useState<"dinein" | "delivery" | "celebration">("dinein");
   
   // Navigation & Tab state (Overview stats, bookings list, QR Scanner)
@@ -724,9 +735,10 @@ function AdminPage() {
         (b.paymentId && b.paymentId.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesStatus = statusFilter === "all" || b.status === statusFilter;
       const matchesPackage = b.package === activeBookingTab;
-      return matchesSearch && matchesStatus && matchesPackage;
+      const matchesDate = selectedBookingDate === "all" || b.date === selectedBookingDate;
+      return matchesSearch && matchesStatus && matchesPackage && matchesDate;
     });
-  }, [bookings, searchQuery, statusFilter, activeBookingTab]);
+  }, [bookings, searchQuery, statusFilter, activeBookingTab, selectedBookingDate]);
 
   if (!isAuthenticated) {
     return (
@@ -1152,6 +1164,47 @@ function AdminPage() {
                 </div>
               </div>
               
+              {/* Date-wise Filter Calendar Selector */}
+              <div className="flex items-center justify-between bg-card/60 p-2.5 rounded-2xl border border-gold/15 mb-4 shadow-xs select-none">
+                <button
+                  onClick={() => {
+                    if (selectedBookingDate !== "all") {
+                      const prev = selectedBookingDate - 1;
+                      if (prev >= 15) setSelectedBookingDate(prev);
+                    }
+                  }}
+                  disabled={selectedBookingDate === "all" || selectedBookingDate === 15}
+                  className="p-2 rounded-xl bg-card border border-gold/10 hover:bg-gold/10 disabled:opacity-30 disabled:hover:bg-transparent text-primary transition cursor-pointer"
+                >
+                  <ChevronLeft className="h-4.5 w-4.5" />
+                </button>
+
+                <div className="flex flex-col items-center gap-1.5 text-center">
+                  <span className="font-display font-extrabold text-sm tracking-wide text-primary">
+                    {selectedBookingDate === "all" ? "All Dates (Aug 15 - 30)" : `August ${selectedBookingDate}`}
+                  </span>
+                  <button
+                    onClick={() => setSelectedBookingDate(selectedBookingDate === "all" ? 26 : "all")}
+                    className="text-[9px] uppercase font-bold tracking-wider text-gold hover:text-gold-dark transition underline decoration-dotted underline-offset-3 cursor-pointer"
+                  >
+                    {selectedBookingDate === "all" ? "Filter by Date" : "Show All Dates"}
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (selectedBookingDate !== "all") {
+                      const next = selectedBookingDate + 1;
+                      if (next <= 30) setSelectedBookingDate(next);
+                    }
+                  }}
+                  disabled={selectedBookingDate === "all" || selectedBookingDate === 30}
+                  className="p-2 rounded-xl bg-card border border-gold/10 hover:bg-gold/10 disabled:opacity-30 disabled:hover:bg-transparent text-primary transition cursor-pointer"
+                >
+                  <ChevronRight className="h-4.5 w-4.5" />
+                </button>
+              </div>
+
               {/* Search & Filters toolbar */}
               <div className="flex flex-col md:flex-row gap-3 mb-5">
                 <div className="relative flex-1">
@@ -1164,16 +1217,37 @@ function AdminPage() {
                     className="w-full rounded-full border border-gold/20 bg-card/50 pl-10 pr-4 py-2 text-sm text-primary placeholder:text-muted-foreground/50 focus:border-gold focus:outline-none"
                   />
                 </div>
-                <div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="rounded-full border border-gold/20 bg-card px-4 py-2 text-xs text-primary focus:outline-none w-full md:w-auto"
+                <div className="relative">
+                  <button
+                    onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                    className="rounded-full border border-gold/20 bg-card px-4 py-2 text-xs text-primary focus:outline-none w-full md:w-auto flex items-center justify-between gap-2.5 cursor-pointer min-w-[130px] font-semibold text-left"
                   >
-                    <option value="all">All Status</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
+                    <span className="capitalize">{statusFilter === "all" ? "All Status" : statusFilter}</span>
+                    <ChevronDown className={`h-3 w-3 text-gold transition-transform duration-200 ${showStatusDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showStatusDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+                      <div className="absolute right-0 mt-2 w-full md:w-36 rounded-2xl bg-card border border-gold/15 shadow-xl p-1 z-50 text-xs animate-scale-up">
+                        {(["all", "confirmed", "cancelled"] as const).map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => {
+                              setStatusFilter(status);
+                              setShowStatusDropdown(false);
+                            }}
+                            className={`w-full text-left rounded-xl px-3 py-2 uppercase tracking-wider text-[10px] font-bold transition-all cursor-pointer ${
+                              statusFilter === status
+                                ? "bg-primary text-white"
+                                : "text-muted-foreground hover:bg-gold/5 hover:text-primary"
+                            }`}
+                          >
+                            {status === "all" ? "All Status" : status}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
