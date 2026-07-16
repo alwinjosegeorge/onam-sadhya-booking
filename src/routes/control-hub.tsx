@@ -653,31 +653,56 @@ function AdminPage() {
 
   // Export to CSV
   const exportToCSV = () => {
-    const headers = ["Booking ID", "Name", "Phone", "Package", "Date", "Slot", "Quantity", "Total (INR)", "Status", "Razorpay Payment ID", "Created At"];
+    const headers = [
+      "Booking ID", 
+      "Name", 
+      "Phone", 
+      "Package", 
+      "Date", 
+      "Slot", 
+      "Quantity", 
+      "Total (INR)", 
+      "Status", 
+      "Razorpay Payment ID", 
+      "Notes",
+      "Created At"
+    ];
+    
+    const escapeCSVField = (val: any) => {
+      if (val === null || val === undefined) return "";
+      let str = String(val);
+      if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+        str = '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+
     const rows = bookings.map((b) => [
-      b.id,
-      b.name,
-      b.phone,
-      b.package,
-      `Aug ${b.date}`,
-      b.slot || "-",
-      b.qty,
-      b.total,
-      b.status,
-      b.paymentId || "-",
-      new Date(b.createdAt).toLocaleString(),
+      escapeCSVField(b.id),
+      escapeCSVField(b.name),
+      escapeCSVField(b.phone),
+      escapeCSVField(b.package),
+      escapeCSVField(`Aug ${b.date}`),
+      escapeCSVField(b.slot || "-"),
+      escapeCSVField(b.qty),
+      escapeCSVField(b.total),
+      escapeCSVField(b.status),
+      escapeCSVField(b.paymentId || "-"),
+      escapeCSVField(b.notes || "-"),
+      escapeCSVField(new Date(b.createdAt).toLocaleString()),
     ]);
 
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [headers.join(","), ...rows.map((e) => e.join(","))].join("\r\n");
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `onam_bookings_report_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `onam_bookings_report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Live occupancy calculations for a selected date
@@ -1533,12 +1558,12 @@ function AdminPage() {
               {!scannerResult && (
                 <div className="mt-8 pt-6 border-t border-gold/15 w-full">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-3">Or enter booking ID manually</p>
-                  <div className="flex items-stretch gap-2">
+                  <div className="flex items-center gap-2">
                     <input
                       type="text"
                       placeholder="e.g. OB-38810"
                       id="manual-checkin-id"
-                      className="flex-1 rounded-full border border-gold/20 bg-card px-5 py-3 text-xs text-primary focus:border-gold focus:outline-none"
+                      className="flex-1 h-12 rounded-full border border-gold/20 bg-card px-5 text-xs text-primary focus:border-gold focus:outline-none"
                     />
                     <button
                       onClick={() => {
@@ -1547,7 +1572,7 @@ function AdminPage() {
                           handleScanSuccess(JSON.stringify({ bookingId: val }));
                         }
                       }}
-                      className="bg-primary text-white px-6 py-3 rounded-full text-xs font-semibold uppercase tracking-wider hover:bg-primary/90 transition cursor-pointer flex items-center justify-center shrink-0"
+                      className="bg-primary text-white px-6 h-12 rounded-full text-xs font-semibold uppercase tracking-wider hover:bg-primary/90 transition cursor-pointer flex items-center justify-center shrink-0"
                     >
                       Verify
                     </button>
