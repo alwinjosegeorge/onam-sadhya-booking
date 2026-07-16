@@ -193,7 +193,7 @@ function AdminPage() {
     localStorage.setItem("onam_closed_dates", JSON.stringify(updated));
     
     // Save settings to Neon DB
-    saveSettingsFn({ closedDates: updated, closedSlots }).catch(err => {
+    saveSettingsFn({ data: { closedDates: updated, closedSlots } }).catch(err => {
       console.error("Failed to save settings to Neon:", err);
     });
   };
@@ -211,7 +211,7 @@ function AdminPage() {
     localStorage.setItem("onam_closed_slots", JSON.stringify(updated));
     
     // Save settings to Neon DB
-    saveSettingsFn({ closedDates, closedSlots: updated }).catch(err => {
+    saveSettingsFn({ data: { closedDates, closedSlots: updated } }).catch(err => {
       console.error("Failed to save settings to Neon:", err);
     });
   };
@@ -224,7 +224,7 @@ function AdminPage() {
     saveBookings(updated);
     
     // Cancel booking on Neon DB
-    updateBookingStatusFn({ id, status: "cancelled" }).catch(err => {
+    updateBookingStatusFn({ data: { id, status: "cancelled" } }).catch(err => {
       console.error("Failed to cancel booking on Neon:", err);
     });
   };
@@ -237,7 +237,7 @@ function AdminPage() {
     saveBookings(updated);
     
     // Confirm booking on Neon DB
-    updateBookingStatusFn({ id, status: "confirmed" }).catch(err => {
+    updateBookingStatusFn({ data: { id, status: "confirmed" } }).catch(err => {
       console.error("Failed to confirm booking on Neon:", err);
     });
   };
@@ -274,7 +274,7 @@ function AdminPage() {
     };
 
     saveBookings([b, ...bookings]);
-    createBookingFn(b).catch(err => {
+    createBookingFn({ data: b as any }).catch(err => {
       console.error("Failed to save manual booking to Neon:", err);
     });
     setShowAddForm(false);
@@ -414,7 +414,7 @@ function AdminPage() {
     saveBookings(updated);
     
     // Persist check-in to Neon DB
-    markBookingCheckedInFn({ id: bookingId, checkedIn: true }).catch(err => {
+    markBookingCheckedInFn({ data: { id: bookingId, checkedIn: true } }).catch(err => {
       console.error("Failed to check in booking to Neon:", err);
     });
     

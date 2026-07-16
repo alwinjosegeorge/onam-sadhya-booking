@@ -19,16 +19,6 @@ export interface DbBooking {
   checkedIn?: boolean;
 }
 
-// Database initialization check
-let isDbInitialized = false;
-async function ensureDb() {
-  if (!isDbInitialized) {
-    const { initDb } = await import("./db");
-    await initDb();
-    isDbInitialized = true;
-  }
-}
-
 // Helper to map DB row object to clean DbBooking structure
 function mapRowToBooking(row: any): DbBooking {
   return {
@@ -51,42 +41,57 @@ function mapRowToBooking(row: any): DbBooking {
 }
 
 // Fetch all bookings
-export const getBookingsFn = createServerFn("GET", async () => {
-  await ensureDb();
-  const { sql } = await import("./db");
-  try {
-    const rows = await sql`SELECT * FROM onam_bookings ORDER BY created_at DESC`;
-    return rows.map(mapRowToBooking);
-  } catch (error) {
-    console.error("Error fetching bookings:", error);
-    return [];
-  }
-});
+export const getBookingsFn = createServerFn({ method: "GET" })
+  .handler(async () => {
+    if (!(globalThis as any).onamDbInitialized) {
+      const { initDb } = await import("./db");
+      await initDb();
+      (globalThis as any).onamDbInitialized = true;
+    }
+    const { sql } = await import("./db");
+    try {
+      const rows = await sql`SELECT * FROM onam_bookings ORDER BY created_at DESC`;
+      return rows.map(mapRowToBooking);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      return [];
+    }
+  });
 
 // Insert new booking
-export const createBookingFn = createServerFn("POST", async (b: DbBooking) => {
-  await ensureDb();
-  const { sql } = await import("./db");
-  try {
-    await sql`
-      INSERT INTO onam_bookings (
-        id, name, phone, email, package, date, slot, qty, total, status, address, payment_id, token, checked_in
-      ) VALUES (
-        ${b.id}, ${b.name}, ${b.phone}, ${b.email || null}, ${b.package}, ${b.date}, ${b.slot || null}, ${b.qty}, ${b.total}, ${b.status}, ${b.address || null}, ${b.paymentId || null}, ${b.token}, ${b.checkedIn || false}
-      )
-    `;
-    return { success: true };
-  } catch (error) {
-    console.error("Error inserting booking:", error);
-    throw new Error("Failed to insert booking");
-  }
-});
+export const createBookingFn = createServerFn({ method: "POST" })
+  .validator((b: DbBooking) => b)
+  .handler(async ({ data: b }) => {
+    if (!(globalThis as any).onamDbInitialized) {
+      const { initDb } = await import("./db");
+      await initDb();
+      (globalThis as any).onamDbInitialized = true;
+    }
+    const { sql } = await import("./db");
+    try {
+      await sql`
+        INSERT INTO onam_bookings (
+          id, name, phone, email, package, date, slot, qty, total, status, address, payment_id, token, checked_in
+        ) VALUES (
+          ${b.id}, ${b.name}, ${b.phone}, ${b.email || null}, ${b.package}, ${b.date}, ${b.slot || null}, ${b.qty}, ${b.total}, ${b.status}, ${b.address || null}, ${b.paymentId || null}, ${b.token}, ${b.checkedIn || false}
+        )
+      `;
+      return { success: true };
+    } catch (error) {
+      console.error("Error inserting booking:", error);
+      throw new Error("Failed to insert booking");
+    }
+  });
 
 // Update booking status
-export const updateBookingStatusFn = createServerFn(
-  "POST",
-  async ({ id, status }: { id: string; status: "confirmed" | "cancelled" }) => {
-    await ensureDb();
+export const updateBookingStatusFn = createServerFn({ method: "POST" })
+  .validator((input: { id: string; status: "confirmed" | "cancelled" }) => input)
+  .handler(async ({ data: { id, status } }) => {
+    if (!(globalThis as any).onamDbInitialized) {
+      const { initDb } = await import("./db");
+      await initDb();
+      (globalThis as any).onamDbInitialized = true;
+    }
     const { sql } = await import("./db");
     try {
       await sql`UPDATE onam_bookings SET status = ${status} WHERE id = ${id}`;
@@ -95,14 +100,17 @@ export const updateBookingStatusFn = createServerFn(
       console.error("Error updating booking status:", error);
       throw new Error("Failed to update status");
     }
-  }
-);
+  });
 
 // Toggle / Mark check-in status
-export const markBookingCheckedInFn = createServerFn(
-  "POST",
-  async ({ id, checkedIn }: { id: string; checkedIn: boolean }) => {
-    await ensureDb();
+export const markBookingCheckedInFn = createServerFn({ method: "POST" })
+  .validator((input: { id: string; checkedIn: boolean }) => input)
+  .handler(async ({ data: { id, checkedIn } }) => {
+    if (!(globalThis as any).onamDbInitialized) {
+      const { initDb } = await import("./db");
+      await initDb();
+      (globalThis as any).onamDbInitialized = true;
+    }
     const { sql } = await import("./db");
     try {
       await sql`UPDATE onam_bookings SET checked_in = ${checkedIn} WHERE id = ${id}`;
@@ -111,34 +119,42 @@ export const markBookingCheckedInFn = createServerFn(
       console.error("Error toggling check-in status:", error);
       throw new Error("Failed to update check-in");
     }
-  }
-);
+  });
 
 // Fetch settings (closed dates & closed slots)
-export const getSettingsFn = createServerFn("GET", async () => {
-  await ensureDb();
-  const { sql } = await import("./db");
-  try {
-    const rows = await sql`SELECT * FROM onam_settings`;
-    const settings: Record<string, string> = {};
-    rows.forEach((r) => {
-      settings[r.key] = r.value;
-    });
+export const getSettingsFn = createServerFn({ method: "GET" })
+  .handler(async () => {
+    if (!(globalThis as any).onamDbInitialized) {
+      const { initDb } = await import("./db");
+      await initDb();
+      (globalThis as any).onamDbInitialized = true;
+    }
+    const { sql } = await import("./db");
+    try {
+      const rows = await sql`SELECT * FROM onam_settings`;
+      const settings: Record<string, string> = {};
+      rows.forEach((r) => {
+        settings[r.key] = r.value;
+      });
 
-    const closedDates: number[] = JSON.parse(settings["closed_dates"] || "[]");
-    const closedSlots: string[] = JSON.parse(settings["closed_slots"] || "[]");
-    return { closedDates, closedSlots };
-  } catch (error) {
-    console.error("Error loading settings:", error);
-    return { closedDates: [], closedSlots: [] };
-  }
-});
+      const closedDates: number[] = JSON.parse(settings["closed_dates"] || "[]");
+      const closedSlots: string[] = JSON.parse(settings["closed_slots"] || "[]");
+      return { closedDates, closedSlots };
+    } catch (error) {
+      console.error("Error loading settings:", error);
+      return { closedDates: [], closedSlots: [] };
+    }
+  });
 
 // Save settings (closed dates & closed slots)
-export const saveSettingsFn = createServerFn(
-  "POST",
-  async ({ closedDates, closedSlots }: { closedDates: number[]; closedSlots: string[] }) => {
-    await ensureDb();
+export const saveSettingsFn = createServerFn({ method: "POST" })
+  .validator((input: { closedDates: number[]; closedSlots: string[] }) => input)
+  .handler(async ({ data: { closedDates, closedSlots } }) => {
+    if (!(globalThis as any).onamDbInitialized) {
+      const { initDb } = await import("./db");
+      await initDb();
+      (globalThis as any).onamDbInitialized = true;
+    }
     const { sql } = await import("./db");
     try {
       // Save closed dates
@@ -160,5 +176,4 @@ export const saveSettingsFn = createServerFn(
       console.error("Error saving settings:", error);
       throw new Error("Failed to save settings");
     }
-  }
-);
+  });

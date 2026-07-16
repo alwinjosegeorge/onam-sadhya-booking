@@ -456,7 +456,7 @@ function OnamBookingApp() {
     localStorage.setItem("onam_bookings", JSON.stringify(updatedBookings));
 
     // Persist to Neon PostgreSQL Database
-    createBookingFn(newBooking).catch(err => {
+    createBookingFn({ data: newBooking }).catch(err => {
       console.error("Failed to save booking to Neon database:", err);
     });
 
