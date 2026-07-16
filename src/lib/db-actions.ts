@@ -17,6 +17,7 @@ export interface DbBooking {
   paymentId?: string;
   token: string;
   checkedIn?: boolean;
+  notes?: string;
 }
 
 // Helper to map DB row object to clean DbBooking structure
@@ -37,6 +38,7 @@ function mapRowToBooking(row: any): DbBooking {
     paymentId: row.payment_id || undefined,
     token: row.token,
     checkedIn: !!row.checked_in,
+    notes: row.notes || undefined,
   };
 }
 
@@ -71,9 +73,9 @@ export const createBookingFn = createServerFn({ method: "POST" })
     try {
       await sql`
         INSERT INTO onam_bookings (
-          id, name, phone, email, package, date, slot, qty, total, status, address, payment_id, token, checked_in
+          id, name, phone, email, package, date, slot, qty, total, status, address, payment_id, token, checked_in, notes
         ) VALUES (
-          ${b.id}, ${b.name}, ${b.phone}, ${b.email || null}, ${b.package}, ${b.date}, ${b.slot || null}, ${b.qty}, ${b.total}, ${b.status}, ${b.address || null}, ${b.paymentId || null}, ${b.token}, ${b.checkedIn || false}
+          ${b.id}, ${b.name}, ${b.phone}, ${b.email || null}, ${b.package}, ${b.date}, ${b.slot || null}, ${b.qty}, ${b.total}, ${b.status}, ${b.address || null}, ${b.paymentId || null}, ${b.token}, ${b.checkedIn || false}, ${b.notes || null}
         )
       `;
       return { success: true };

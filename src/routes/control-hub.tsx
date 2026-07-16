@@ -27,6 +27,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react";
 
 import dineinImg from "@/assets/pkg-dinein.jpg";
@@ -51,6 +52,7 @@ interface Booking {
   address?: string;
   createdAt: string;
   paymentId?: string;
+  notes?: string;
 }
 
 const TIME_SLOTS = [
@@ -1297,7 +1299,14 @@ function AdminPage() {
                         <tr key={b.id} className="border-b border-gold/5 hover:bg-card/10 transition-colors">
                           <td className="py-3 px-2 font-bold text-primary font-display">{b.id}</td>
                           <td className="py-3 px-2">
-                            <div className="font-semibold text-primary">{b.name}</div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-primary">{b.name}</span>
+                              {b.notes && (
+                                <span className="inline-flex items-center justify-center shrink-0 cursor-help" title={`Notes: ${b.notes}`}>
+                                  <MessageSquare className="h-3 w-3 text-gold fill-gold/10" />
+                                </span>
+                              )}
+                            </div>
                             <div className="text-[10px] text-muted-foreground font-medium">{b.phone}</div>
                           </td>
                           <td className="py-3 px-2 font-medium text-primary">Aug {b.date}</td>
@@ -1385,6 +1394,12 @@ function AdminPage() {
                         <p><span className="text-muted-foreground font-medium">Phone:</span> {b.phone}</p>
                         <p><span className="text-muted-foreground font-medium">Date & Slot:</span> Aug {b.date} {b.slot ? ` - ${b.slot}` : ""}</p>
                         {b.address && <p className="leading-normal"><span className="text-muted-foreground font-medium">Address:</span> {b.address}</p>}
+                        {b.notes && (
+                          <div className="bg-[#FAF9F6] border border-gold/15 p-2 rounded-xl text-[11px] text-primary/90 mt-2 flex items-start gap-1.5 leading-normal">
+                            <MessageSquare className="h-3.5 w-3.5 text-gold fill-gold/10 shrink-0 mt-0.5" />
+                            <span><strong>Note:</strong> {b.notes}</span>
+                          </div>
+                        )}
                         <p className="flex justify-between items-baseline pt-1.5 border-t border-gold/5 mt-1.5 font-bold">
                           <span>{b.qty} pax</span>
                           <span className="text-sm font-black text-primary">₹{b.total}</span>

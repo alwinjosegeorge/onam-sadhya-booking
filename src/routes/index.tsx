@@ -245,6 +245,7 @@ interface Booking {
   paymentId?: string;
   token: string;
   checkedIn?: boolean;
+  notes?: string;
 }
 
 function OnamBookingApp() {
@@ -292,6 +293,7 @@ function OnamBookingApp() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
 
   // Live storage states
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -484,6 +486,7 @@ function OnamBookingApp() {
       paymentId: paymentId,
       token: "TK-" + Math.random().toString(36).substring(2, 10).toUpperCase() + "-" + Math.floor(1000 + Math.random() * 9000),
       checkedIn: false,
+      notes: notes.trim() || undefined,
     };
 
     const updatedBookings = [newBooking, ...bookings];
@@ -647,6 +650,7 @@ function OnamBookingApp() {
     setPhone("");
     setEmail("");
     setAddress("");
+    setNotes("");
     setStep(1);
     setSubStep(1);
   };
@@ -656,10 +660,11 @@ function OnamBookingApp() {
     const dateStr = `August ${b.date}, 2026`;
     const slotStr = b.package === "dinein" ? `\n- Seating Slot: ${b.slot}` : "";
     const addressStr = b.package === "delivery" ? `\n- Delivery Address: ${b.address}` : "";
+    const notesStr = b.notes ? `\n- Notes: ${b.notes}` : "";
     
     // Scannable QR Ticket endpoint containing booking details
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-      JSON.stringify({ bookingId: b.id, name: b.name, phone: b.phone, package: b.package, date: b.date, qty: b.qty, total: b.total, paymentId: b.paymentId })
+      JSON.stringify({ bookingId: b.id, name: b.name, phone: b.phone, package: b.package, date: b.date, qty: b.qty, total: b.total, paymentId: b.paymentId, notes: b.notes })
     )}`;
 
     const message = `Namaskaram! My Onam Sadhya Booking has been confirmed:
@@ -668,7 +673,7 @@ function OnamBookingApp() {
 - Phone Number: ${b.phone}
 - Email Address: ${b.email || "-"}
 - Package: ${pkgName}
-- Date: ${dateStr}${slotStr}${addressStr}
+- Date: ${dateStr}${slotStr}${addressStr}${notesStr}
 - Guests/Qty: ${b.qty} Pax
 - Total Amount: ₹${b.total.toLocaleString("en-IN")}
 - Payment Status: PAID (Razorpay ID: ${b.paymentId})
@@ -1538,6 +1543,8 @@ Please present this QR code at entry. Thank you!`;
                           <input
                             type="text"
                             placeholder="Anything we should know?"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
                             className="w-full rounded-xl border border-[#EAE6DF] bg-[#FAF9F6] px-4 py-3 text-xs text-primary focus:border-gold focus:outline-none"
                           />
                         </div>

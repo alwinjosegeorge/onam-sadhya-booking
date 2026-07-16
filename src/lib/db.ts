@@ -27,8 +27,14 @@ export async function initDb() {
         payment_id VARCHAR(255),
         token VARCHAR(255) NOT NULL,
         checked_in BOOLEAN DEFAULT FALSE,
+        notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+    `;
+
+    // Ensure notes column exists for older database installations
+    await sql`
+      ALTER TABLE onam_bookings ADD COLUMN IF NOT EXISTS notes TEXT;
     `;
 
     // Create settings table for date/slot locks
