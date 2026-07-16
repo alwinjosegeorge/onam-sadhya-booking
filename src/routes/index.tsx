@@ -1737,7 +1737,7 @@ Please present this QR code at entry. Thank you!`;
       {showSuccessModal && createdBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
           {/* Main Card */}
-          <div className="relative w-full max-w-[360px] bg-card rounded-[32px] border border-gold/20 shadow-2xl p-6 flex flex-col items-center text-center overflow-hidden animate-scale-up">
+          <div className="relative w-full max-w-[360px] max-h-[90vh] overflow-y-auto scrollbar-thin bg-card rounded-[32px] border border-gold/20 shadow-2xl p-6 flex flex-col items-center text-center animate-scale-up">
             {/* Background design */}
             <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-gold via-[#EAE6DF] to-gold" />
             

@@ -288,6 +288,146 @@ function AdminPage() {
       address: "",
     });
   };
+
+  const handleDownloadTicket = (b: Booking) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 400;
+    canvas.height = 680;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const qrImg = new Image();
+    qrImg.crossOrigin = "anonymous";
+    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+      JSON.stringify({
+        bookingId: b.id,
+        token: b.token || "",
+      })
+    )}`;
+
+    qrImg.onload = () => {
+      // Background
+      ctx.fillStyle = "#FAF9F6";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Top decorative gold bar
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      gradient.addColorStop(0, "#C89B3C");
+      gradient.addColorStop(0.5, "#EAE6DF");
+      gradient.addColorStop(1, "#C89B3C");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, 10);
+
+      // Header Text
+      ctx.fillStyle = "#1E4D3A";
+      ctx.font = "bold 20px 'Playfair Display', serif";
+      ctx.textAlign = "center";
+      ctx.fillText("KADAMBRAYAR ONACHAMAYAM", canvas.width / 2, 45);
+
+      ctx.fillStyle = "#C89B3C";
+      ctx.font = "bold 10px 'Inter', sans-serif";
+      ctx.fillText("ONAM SADHYA ENTRY PASS", canvas.width / 2, 65);
+
+      // QR Code Container background
+      ctx.fillStyle = "#FFFFFF";
+      ctx.beginPath();
+      if (typeof ctx.roundRect === "function") {
+        ctx.roundRect((canvas.width - 220) / 2, 90, 220, 220, 16);
+      } else {
+        ctx.rect((canvas.width - 220) / 2, 90, 220, 220);
+      }
+      ctx.fill();
+      ctx.strokeStyle = "#EAE6DF";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Draw QR Code Image inside container
+      ctx.drawImage(qrImg, (canvas.width - 180) / 2, 110, 180, 180);
+
+      // Present text
+      ctx.fillStyle = "#71717A";
+      ctx.font = "500 10px 'Inter', sans-serif";
+      ctx.fillText("Please present this QR at check-in or delivery.", canvas.width / 2, 335);
+
+      // Dashed separator line
+      ctx.strokeStyle = "#D4D4D8";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(25, 360);
+      ctx.lineTo(canvas.width - 25, 360);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Ticket Details helper
+      const drawDetailRow = (y: number, label: string, value: string, isBoldVal = false) => {
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#71717A";
+        ctx.font = "bold 10px 'Inter', sans-serif";
+        ctx.fillText(label.toUpperCase(), 35, y);
+
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#1E4D3A";
+        ctx.font = isBoldVal ? "bold 12px 'Inter', sans-serif" : "600 11px 'Inter', sans-serif";
+        ctx.fillText(value, canvas.width - 35, y);
+      };
+
+      let yOffset = 395;
+      drawDetailRow(yOffset, "Booking ID", b.id, true);
+      yOffset += 30;
+      drawDetailRow(yOffset, "Customer", b.name);
+      yOffset += 30;
+      const formattedDate = `Aug ${b.date}, 2026` + (b.slot ? ` (${b.slot})` : "");
+      drawDetailRow(yOffset, "Date & Time", formattedDate);
+      yOffset += 30;
+      const pkgLabel = b.package === "dinein" ? "Dine-In" : b.package === "delivery" ? "Home Delivery" : "Celebration";
+      drawDetailRow(yOffset, "Package", pkgLabel);
+      yOffset += 30;
+      const qtyLabel = `${b.qty} ` + (b.package === "delivery" ? "Sadhyas" : "Guests");
+      drawDetailRow(yOffset, "Quantity", qtyLabel);
+
+      // Another separator
+      ctx.strokeStyle = "#D4D4D8";
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(25, yOffset + 20);
+      ctx.lineTo(canvas.width - 25, yOffset + 20);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Total Paid
+      yOffset += 45;
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#1E4D3A";
+      ctx.font = "extrabold 12px 'Inter', sans-serif";
+      ctx.fillText("TOTAL PAID", 35, yOffset);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#1E4D3A";
+      ctx.font = "bold 20px 'Playfair Display', serif";
+      ctx.fillText(`₹${b.total.toLocaleString("en-IN")}`, canvas.width - 35, yOffset);
+
+      // Happy Onam greeting
+      ctx.fillStyle = "#C89B3C";
+      ctx.font = "bold italic 13px 'Playfair Display', serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Happy Onam!", canvas.width / 2, canvas.height - 25);
+
+      try {
+        const link = document.createElement("a");
+        link.download = `onam-sadhya-ticket-${b.id}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } catch (err) {
+        console.error("Failed to export ticket image:", err);
+        alert("Failed to download ticket as image.");
+      }
+    };
+
+    qrImg.onerror = () => {
+      alert("Failed to load ticket QR Code. Please check your connection.");
+    };
+  };
  
   // Scanner helper functions
   const handleOpenScanner = () => {
@@ -1361,7 +1501,7 @@ function AdminPage() {
       {/* View QR Code Overlay Modal */}
       {selectedBookingForQr && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-[360px] bg-card rounded-[32px] border border-gold/20 shadow-2xl p-6 flex flex-col items-center text-center overflow-hidden">
+          <div className="relative w-full max-w-[360px] max-h-[90vh] overflow-y-auto scrollbar-thin bg-card rounded-[32px] border border-gold/20 shadow-2xl p-6 flex flex-col items-center text-center">
             {/* Top gold line */}
             <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-gold via-[#EAE6DF] to-gold" />
             
@@ -1428,10 +1568,16 @@ function AdminPage() {
                 )}
               </div>
             </div>
-            
+            <button
+              onClick={() => handleDownloadTicket(selectedBookingForQr)}
+              className="mt-6 w-full bg-[#1E4D3A] hover:bg-[#163a2c] text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-md cursor-pointer"
+            >
+              Download Ticket
+              <Download className="h-4 w-4" />
+            </button>
             <button
               onClick={() => setSelectedBookingForQr(null)}
-              className="mt-6 w-full bg-primary text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+              className="mt-2.5 w-full bg-primary text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
             >
               Close Ticket
             </button>
