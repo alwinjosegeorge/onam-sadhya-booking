@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, useRef } from "react";
+import { getBookingsFn, createBookingFn, getSettingsFn } from "@/lib/db-actions";
 import {
   Home,
   Ticket,
@@ -272,6 +273,7 @@ function OnamBookingApp() {
   const [closedSlots, setClosedSlots] = useState<string[]>([]);
 
   useEffect(() => {
+    // 1. Initial load from local storage cache for instant rendering
     const storedBookings = localStorage.getItem("onam_bookings");
     const storedClosedDates = localStorage.getItem("onam_closed_dates");
     const storedClosedSlots = localStorage.getItem("onam_closed_slots");
@@ -279,6 +281,23 @@ function OnamBookingApp() {
     if (storedBookings) setBookings(JSON.parse(storedBookings));
     if (storedClosedDates) setClosedDates(JSON.parse(storedClosedDates));
     if (storedClosedSlots) setClosedSlots(JSON.parse(storedClosedSlots));
+
+    // 2. Fetch live data from Neon PostgreSQL database
+    getBookingsFn().then((liveBookings) => {
+      if (liveBookings) {
+        setBookings(liveBookings);
+        localStorage.setItem("onam_bookings", JSON.stringify(liveBookings));
+      }
+    }).catch(err => console.error("Failed to fetch bookings from Neon:", err));
+
+    getSettingsFn().then((settings) => {
+      if (settings) {
+        setClosedDates(settings.closedDates);
+        setClosedSlots(settings.closedSlots);
+        localStorage.setItem("onam_closed_dates", JSON.stringify(settings.closedDates));
+        localStorage.setItem("onam_closed_slots", JSON.stringify(settings.closedSlots));
+      }
+    }).catch(err => console.error("Failed to fetch settings from Neon:", err));
 
     // Load Razorpay script dynamically
     const script = document.createElement("script");
@@ -435,6 +454,11 @@ function OnamBookingApp() {
     const updatedBookings = [newBooking, ...bookings];
     setBookings(updatedBookings);
     localStorage.setItem("onam_bookings", JSON.stringify(updatedBookings));
+
+    // Persist to Neon PostgreSQL Database
+    createBookingFn(newBooking).catch(err => {
+      console.error("Failed to save booking to Neon database:", err);
+    });
 
     // Show the success modal with QR ticket
     setCreatedBooking(newBooking);

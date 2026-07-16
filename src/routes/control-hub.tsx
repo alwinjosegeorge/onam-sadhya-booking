@@ -1,5 +1,13 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
+import { 
+  getBookingsFn, 
+  createBookingFn, 
+  updateBookingStatusFn, 
+  markBookingCheckedInFn, 
+  getSettingsFn, 
+  saveSettingsFn 
+} from "@/lib/db-actions";
 import {
   TrendingUp,
   Users,
@@ -15,6 +23,7 @@ import {
   CheckCircle,
   AlertTriangle,
   ArrowLeft,
+  QrCode,
 } from "lucide-react";
 
 import dineinImg from "@/assets/pkg-dinein.jpg";
@@ -89,6 +98,7 @@ function AdminPage() {
     booking?: Booking;
   } | null>(null);
   const [scannerInst, setScannerInst] = useState<any>(null);
+  const [selectedBookingForQr, setSelectedBookingForQr] = useState<Booking | null>(null);
 
   // Read session auth on mount and load storage items
   useEffect(() => {
@@ -97,6 +107,7 @@ function AdminPage() {
       setIsAuthenticated(true);
     }
 
+    // 1. Initial load from local storage cache for instant rendering
     const storedBookings = localStorage.getItem("onam_bookings");
     const storedClosedDates = localStorage.getItem("onam_closed_dates");
     const storedClosedSlots = localStorage.getItem("onam_closed_slots");
@@ -104,6 +115,23 @@ function AdminPage() {
     if (storedBookings) setBookings(JSON.parse(storedBookings));
     if (storedClosedDates) setClosedDates(JSON.parse(storedClosedDates));
     if (storedClosedSlots) setClosedSlots(JSON.parse(storedClosedSlots));
+
+    // 2. Fetch live data from Neon PostgreSQL database
+    getBookingsFn().then((liveBookings) => {
+      if (liveBookings) {
+        setBookings(liveBookings);
+        localStorage.setItem("onam_bookings", JSON.stringify(liveBookings));
+      }
+    }).catch(err => console.error("Failed to fetch bookings from Neon:", err));
+
+    getSettingsFn().then((settings) => {
+      if (settings) {
+        setClosedDates(settings.closedDates);
+        setClosedSlots(settings.closedSlots);
+        localStorage.setItem("onam_closed_dates", JSON.stringify(settings.closedDates));
+        localStorage.setItem("onam_closed_slots", JSON.stringify(settings.closedSlots));
+      }
+    }).catch(err => console.error("Failed to fetch settings from Neon:", err));
   }, []);
 
   // Handle keypad inputs
@@ -163,6 +191,11 @@ function AdminPage() {
     }
     setClosedDates(updated);
     localStorage.setItem("onam_closed_dates", JSON.stringify(updated));
+    
+    // Save settings to Neon DB
+    saveSettingsFn({ closedDates: updated, closedSlots }).catch(err => {
+      console.error("Failed to save settings to Neon:", err);
+    });
   };
 
   // Helper to toggle closed slot
@@ -176,6 +209,11 @@ function AdminPage() {
     }
     setClosedSlots(updated);
     localStorage.setItem("onam_closed_slots", JSON.stringify(updated));
+    
+    // Save settings to Neon DB
+    saveSettingsFn({ closedDates, closedSlots: updated }).catch(err => {
+      console.error("Failed to save settings to Neon:", err);
+    });
   };
 
   // Cancel booking action
@@ -184,6 +222,11 @@ function AdminPage() {
       b.id === id ? { ...b, status: "cancelled" as const } : b
     );
     saveBookings(updated);
+    
+    // Cancel booking on Neon DB
+    updateBookingStatusFn({ id, status: "cancelled" }).catch(err => {
+      console.error("Failed to cancel booking on Neon:", err);
+    });
   };
 
   // Confirm/restore booking action
@@ -192,6 +235,11 @@ function AdminPage() {
       b.id === id ? { ...b, status: "confirmed" as const } : b
     );
     saveBookings(updated);
+    
+    // Confirm booking on Neon DB
+    updateBookingStatusFn({ id, status: "confirmed" }).catch(err => {
+      console.error("Failed to confirm booking on Neon:", err);
+    });
   };
 
   // Add manual booking
@@ -226,6 +274,9 @@ function AdminPage() {
     };
 
     saveBookings([b, ...bookings]);
+    createBookingFn(b).catch(err => {
+      console.error("Failed to save manual booking to Neon:", err);
+    });
     setShowAddForm(false);
     setNewBooking({
       name: "",
@@ -361,6 +412,12 @@ function AdminPage() {
       b.id === bookingId ? { ...b, checkedIn: true } : b
     );
     saveBookings(updated);
+    
+    // Persist check-in to Neon DB
+    markBookingCheckedInFn({ id: bookingId, checkedIn: true }).catch(err => {
+      console.error("Failed to check in booking to Neon:", err);
+    });
+    
     setScannerResult(null);
     setShowScanner(false);
   };
@@ -866,7 +923,18 @@ function AdminPage() {
                       filteredBookings.map((b) => (
                         <tr key={b.id} className="border-b border-gold/5 hover:bg-card/30 transition">
                           <td className="py-3.5 px-2">
-                            <p className="font-semibold font-display text-primary">{b.id}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold font-display text-primary">{b.id}</p>
+                              {b.status === "confirmed" && (
+                                <button
+                                  onClick={() => setSelectedBookingForQr(b)}
+                                  className="text-gold hover:text-gold-dark hover:scale-110 transition cursor-pointer p-0.5"
+                                  title="View Ticket QR Code"
+                                >
+                                  <QrCode className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
                             {b.paymentId && (
                               <p className="text-[9px] font-mono text-gold-dark mt-0.5" title="Razorpay Payment ID">
                                 💳 {b.paymentId}
@@ -940,7 +1008,18 @@ function AdminPage() {
                     <article key={b.id} className="bg-card/45 rounded-2xl p-4 border border-gold/10 space-y-3 shadow-sm hover:shadow-md transition">
                       <div className="flex items-center justify-between border-b border-gold/5 pb-2.5">
                         <div className="flex flex-col">
-                          <span className="font-semibold text-primary font-display text-sm">{b.id}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-primary font-display text-sm">{b.id}</span>
+                            {b.status === "confirmed" && (
+                              <button
+                                onClick={() => setSelectedBookingForQr(b)}
+                                className="text-gold hover:text-gold-dark transition cursor-pointer p-0.5"
+                                title="View Ticket QR Code"
+                              >
+                                <QrCode className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                           {b.paymentId && (
                             <span className="text-[9px] font-mono text-gold-dark mt-0.5" title="Razorpay Payment ID">
                               💳 {b.paymentId}
@@ -1275,6 +1354,87 @@ function AdminPage() {
                 Point camera at customer's booking QR Code ticket.
               </p>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* View QR Code Overlay Modal */}
+      {selectedBookingForQr && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-[360px] bg-card rounded-[32px] border border-gold/20 shadow-2xl p-6 flex flex-col items-center text-center overflow-hidden">
+            {/* Top gold line */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-gold via-[#EAE6DF] to-gold" />
+            
+            <button
+              onClick={() => setSelectedBookingForQr(null)}
+              className="absolute right-5 top-5 grid h-9 w-9 place-items-center rounded-full bg-muted text-primary hover:bg-gold/10 transition cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            
+            <h3 className="mt-4 font-display text-lg font-semibold text-primary">Booking Entry Ticket</h3>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-0.5 mb-6">Customer QR Code</p>
+            
+            {/* QR Image */}
+            <div className="relative w-44 h-44 bg-white border border-[#EAE6DF] rounded-2xl p-2 flex items-center justify-center shadow-sm">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                  JSON.stringify({
+                    bookingId: selectedBookingForQr.id,
+                    token: selectedBookingForQr.token,
+                  })
+                )}`}
+                alt="Entry Ticket QR"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            
+            <p className="mt-3 text-[9px] text-primary/70 font-semibold max-w-[200px] leading-normal mb-5">
+              This QR code can be scanned at entry for verification.
+            </p>
+            
+            {/* Booking Details */}
+            <div className="w-full bg-[#FAF9F6] border border-[#EAE6DF] rounded-2xl p-4 text-left text-xs space-y-2">
+              <div className="flex justify-between border-b border-gold/5 pb-1.5">
+                <span className="text-muted-foreground">Booking ID</span>
+                <span className="font-bold text-primary font-display">{selectedBookingForQr.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Customer</span>
+                <span className="font-bold text-primary">{selectedBookingForQr.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Phone</span>
+                <span className="font-semibold text-primary">{selectedBookingForQr.phone}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Package</span>
+                <span className="font-bold text-primary capitalize">{selectedBookingForQr.package}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Date</span>
+                <span className="font-bold text-primary font-display">Aug {selectedBookingForQr.date}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Quantity</span>
+                <span className="font-bold text-primary">{selectedBookingForQr.qty} Pax</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Status</span>
+                {selectedBookingForQr.checkedIn ? (
+                  <span className="font-bold text-emerald-600 uppercase text-[9px] tracking-wider bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Checked In</span>
+                ) : (
+                  <span className="font-bold text-amber-600 uppercase text-[9px] tracking-wider bg-amber-50 px-2 py-0.5 rounded border border-amber-100">Pending Entry</span>
+                )}
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setSelectedBookingForQr(null)}
+              className="mt-6 w-full bg-primary text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition shadow-md cursor-pointer"
+            >
+              Close Ticket
+            </button>
           </div>
         </div>
       )}
