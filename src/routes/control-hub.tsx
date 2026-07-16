@@ -1634,6 +1634,7 @@ function AdminPage() {
                 <input
                   type="text"
                   required
+                  autoComplete="off"
                   value={newBooking.name}
                   onChange={(e) => setNewBooking({ ...newBooking, name: e.target.value })}
                   placeholder="Enter name"
@@ -1646,6 +1647,7 @@ function AdminPage() {
                 <input
                   type="tel"
                   required
+                  autoComplete="off"
                   value={newBooking.phone}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, "").slice(0, 10);
@@ -1745,8 +1747,15 @@ function AdminPage() {
                       placeholder={`Enter quantity (Max ${currentRemaining})`}
                       value={newBooking.qty}
                       onChange={(e) => {
-                        const val = e.target.value;
-                        setNewBooking({ ...newBooking, qty: val === "" ? "" as any : parseInt(val) || 0 });
+                        const val = e.target.value.replace(/\D/g, "");
+                        if (val.length <= 3) {
+                          const parsed = parseInt(val, 10);
+                          if (!isNaN(parsed) && parsed > currentRemaining) {
+                            setNewBooking({ ...newBooking, qty: currentRemaining });
+                          } else {
+                            setNewBooking({ ...newBooking, qty: val === "" ? "" as any : parsed || "" as any });
+                          }
+                        }
                       }}
                       className="w-full rounded-xl border border-gold/20 bg-card px-3 py-2 text-sm text-primary focus:border-gold focus:outline-none"
                     />
