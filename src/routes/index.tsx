@@ -1099,11 +1099,13 @@ Please present this QR code at entry. Thank you!`;
                                 }`}
                               >
                                 <span className="text-xs font-bold">{t}</span>
-                                <span className={`text-[8px] font-extrabold uppercase tracking-widest mt-0.5 ${
-                                  active ? "text-gold-soft" : disabled ? "text-maroon/90 font-bold" : "text-muted-foreground"
-                                }`}>
-                                  {s === "closed" ? "Closed" : s === "full" ? "Full" : `${remaining} Seats Left`}
-                                </span>
+                                {(s === "closed" || s === "full") && (
+                                  <span className={`text-[8px] font-extrabold uppercase tracking-widest mt-0.5 ${
+                                    active ? "text-gold-soft" : "text-maroon/90 font-bold"
+                                  }`}>
+                                    {s === "closed" ? "Closed" : "Full"}
+                                  </span>
+                                )}
                               </button>
                             );
                           })}
