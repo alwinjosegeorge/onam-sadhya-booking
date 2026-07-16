@@ -248,10 +248,10 @@ interface Booking {
 
 function OnamBookingApp() {
   const router = useRouter();
-  const [pkg, setPkg] = useState<PackageKey>("dinein");
-  const [date, setDate] = useState(26);
-  const [slot, setSlot] = useState("12:00 PM");
-  const [qty, setQty] = useState(2);
+  const [pkg, setPkg] = useState<PackageKey | null>(null);
+  const [date, setDate] = useState<number | null>(null);
+  const [slot, setSlot] = useState<string | null>(null);
+  const [qty, setQty] = useState<number | null>(null);
   const [tab, setTab] = useState("home");
 
   // Stepped wizard states
@@ -350,17 +350,23 @@ function OnamBookingApp() {
     return list;
   }, [closedDates]);
 
-  const current = PACKAGES[pkg];
-  const total = current.price * qty;
+  const current = pkg ? PACKAGES[pkg] : null;
+  const total = current ? current.price * (qty || 0) : 0;
 
   // Live capacity calculation for selected package and date
   const capacityInfo = useMemo(() => {
+    if (!pkg || !date) {
+      return { remaining: 200, status: "avail", totalBooked: 0 };
+    }
     const isDateClosed = closedDates.includes(date);
     if (isDateClosed) {
       return { remaining: 0, status: "closed", totalBooked: 0 };
     }
 
     if (pkg === "dinein") {
+      if (!slot) {
+        return { remaining: 200, status: "avail", totalBooked: 0 };
+      }
       const isSlotClosed = closedSlots.includes(`${date}-${slot}`);
       if (isSlotClosed) {
         return { remaining: 0, status: "closed", totalBooked: 0 };
@@ -400,6 +406,9 @@ function OnamBookingApp() {
   // Dynamic capacity info for all time slots
   const dynamicTimeSlots = useMemo(() => {
     return TIME_SLOTS.map((t) => {
+      if (!date) {
+        return { t, s: "avail" as const, remaining: 200 };
+      }
       const isClosed = closedSlots.includes(`${date}-${t}`) || closedDates.includes(date);
       if (isClosed) {
         return { t, s: "closed" as const, remaining: 0 };
@@ -408,7 +417,7 @@ function OnamBookingApp() {
         .filter((b) => b.status === "confirmed" && b.package === "dinein" && b.date === date && b.slot === t)
         .reduce((sum, b) => sum + b.qty, 0);
       const remaining = Math.max(0, 200 - booked);
-      const isFullForGuests = remaining < qty;
+      const isFullForGuests = remaining < (qty || 1);
       return {
         t,
         s: (remaining <= 0 || isFullForGuests) ? ("full" as const) : remaining < 40 ? ("almost" as const) : ("avail" as const),
@@ -439,10 +448,10 @@ function OnamBookingApp() {
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim(),
-      package: pkg,
-      date,
-      slot: pkg === "dinein" ? slot : undefined,
-      qty,
+      package: pkg!,
+      date: date!,
+      slot: pkg === "dinein" ? (slot || undefined) : undefined,
+      qty: qty!,
       total,
       status: "confirmed",
       address: pkg === "delivery" ? address.trim() : undefined,
@@ -649,6 +658,23 @@ Please present this QR code at entry. Thank you!`;
   };
 
   const handleReserve = () => {
+    if (!pkg) {
+      alert("Please select a package first.");
+      return;
+    }
+    if (!date) {
+      alert("Please select a date first.");
+      return;
+    }
+    if (pkg === "dinein" && !slot) {
+      alert("Please select a seating slot first.");
+      return;
+    }
+    if (!qty) {
+      alert("Please select guest quantity first.");
+      return;
+    }
+
     if (closedDates.includes(date)) {
       alert("This date is closed for bookings.");
       return;
@@ -1147,7 +1173,7 @@ Please present this QR code at entry. Thank you!`;
                   {accordionHeader(
                     1,
                     "Choose your package",
-                    pkg === "dinein" ? "Dine-In" : pkg === "delivery" ? "Delivery" : "Full Day",
+                    pkg ? (pkg === "dinein" ? "Dine-In" : pkg === "delivery" ? "Delivery" : "Full Day") : undefined,
                     subStep === 1,
                     true
                   )}
@@ -1193,7 +1219,7 @@ Please present this QR code at entry. Thank you!`;
                     "Pick a date",
                     date ? `${date} Aug` : undefined,
                     subStep === 2,
-                    true
+                    pkg !== null
                   )}
                   {subStep === 2 && (
                     <div className="p-6 border-b border-secondary/20 bg-white">
@@ -1235,9 +1261,9 @@ Please present this QR code at entry. Thank you!`;
                   {accordionHeader(
                     3,
                     "Pick a time slot",
-                    pkg === "dinein" ? slot : "Not Required",
+                    pkg === "dinein" ? (slot || undefined) : "Not Required",
                     subStep === 3,
-                    pkg === "dinein"
+                    pkg === "dinein" && date !== null
                   )}
                   {subStep === 3 && (
                     <div className="p-6 border-b border-secondary/20 bg-white">
@@ -1294,9 +1320,9 @@ Please present this QR code at entry. Thank you!`;
                   {accordionHeader(
                     4,
                     pkg === "delivery" ? "How many sadhya?" : "How many guests?",
-                    pkg === "delivery" ? `${qty} Sadhya` : `${qty} Guests`,
+                    qty ? (pkg === "delivery" ? `${qty} Sadhya` : `${qty} Guests`) : undefined,
                     subStep === 4,
-                    true
+                    date !== null && (pkg === "dinein" ? slot !== null : true)
                   )}
                   {subStep === 4 && (
                     <div className="p-6 border-b border-secondary/20 bg-white">
@@ -1304,7 +1330,7 @@ Please present this QR code at entry. Thank you!`;
                         <div className="flex items-center justify-between border border-[#EAE6DF] rounded-2xl p-2.5 bg-[#FAF9F6] w-full max-w-[240px]">
                           <button
                             type="button"
-                            onClick={() => setQty(Math.max(1, qty - 1))}
+                            onClick={() => setQty(Math.max(1, (qty || 1) - 1))}
                             className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary border border-secondary/20 shadow-sm transition hover:scale-105 cursor-pointer font-bold shrink-0"
                           >
                             –
@@ -1333,7 +1359,7 @@ Please present this QR code at entry. Thank you!`;
 
                           <button
                             type="button"
-                            onClick={() => setQty(Math.min(capacityInfo.remaining, qty + 1))}
+                            onClick={() => setQty(Math.min(capacityInfo.remaining, (qty || 0) + 1))}
                             className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary border border-secondary/20 shadow-sm transition hover:scale-105 cursor-pointer font-bold shrink-0"
                           >
                             +
@@ -1342,7 +1368,13 @@ Please present this QR code at entry. Thank you!`;
                         
                         <button
                           type="button"
-                          onClick={() => setSubStep(5)}
+                          onClick={() => {
+                            if (!qty) {
+                              alert("Please select a quantity first.");
+                              return;
+                            }
+                            setSubStep(5);
+                          }}
                           className="mt-2 w-full max-w-[240px] py-3.5 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-102 transition shadow-md cursor-pointer"
                         >
                           Continue
@@ -1357,7 +1389,7 @@ Please present this QR code at entry. Thank you!`;
                     "Your details",
                     name ? name : undefined,
                     subStep === 5,
-                    true
+                    qty !== null
                   )}
                   {subStep === 5 && (
                     <form
@@ -1453,21 +1485,25 @@ Please present this QR code at entry. Thank you!`;
                         Your Reservation
                       </span>
                       <h3 className="font-display text-2xl font-bold text-white">
-                        {pkg === "dinein" ? "Onam Sadya" : pkg === "delivery" ? "Sadya at Home" : "One Day Experience"}
+                        {pkg ? (pkg === "dinein" ? "Onam Sadya" : pkg === "delivery" ? "Sadya at Home" : "One Day Experience") : "Choose a Package"}
                       </h3>
                       <p className="text-xs text-[#8E9F96] font-semibold">
-                        August {date} {pkg === "dinein" ? ` - ${slot}` : ""}
+                        {date ? `August ${date}` : "Pick a date"}{pkg === "dinein" && slot ? ` - ${slot}` : ""}
                       </p>
                     </div>
 
                     <div className="border-t border-[#1a3d2e] pt-4 space-y-3 text-xs font-semibold">
                       <div className="flex justify-between text-[#8E9F96]">
                         <span>Package</span>
-                        <span className="text-white">₹{PACKAGES[pkg].price} × {qty}</span>
+                        <span className="text-white">
+                          {pkg && qty ? `₹${PACKAGES[pkg].price} × ${qty}` : "—"}
+                        </span>
                       </div>
                       <div className="flex justify-between text-[#8E9F96]">
                         <span>Guests</span>
-                        <span className="text-white">{qty} guests</span>
+                        <span className="text-white">
+                          {qty ? `${qty} ${pkg === "delivery" ? "sadhyas" : "guests"}` : "—"}
+                        </span>
                       </div>
                       <div className="flex justify-between text-[#8E9F96]">
                         <span>GST & fees</span>
@@ -1485,6 +1521,23 @@ Please present this QR code at entry. Thank you!`;
                     <button
                       type="button"
                       onClick={() => {
+                        if (subStep === 1 && !pkg) {
+                          alert("Please select a package first.");
+                          return;
+                        }
+                        if (subStep === 2 && !date) {
+                          alert("Please select a date first.");
+                          return;
+                        }
+                        if (subStep === 3 && pkg === "dinein" && !slot) {
+                          alert("Please select a time slot first.");
+                          return;
+                        }
+                        if (subStep === 4 && !qty) {
+                          alert("Please select guest quantity first.");
+                          return;
+                        }
+
                         if (subStep === 5) {
                           const formEl = document.getElementById("submit-booking-form");
                           if (formEl) formEl.click();
