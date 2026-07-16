@@ -92,6 +92,7 @@ function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "confirmed" | "cancelled">("all");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showDatePickerDropdown, setShowDatePickerDropdown] = useState(false);
   const [selectedBookingDate, setSelectedBookingDate] = useState<number | "all">(() => {
     const today = new Date();
     if (today.getMonth() === 7 && today.getDate() >= 15 && today.getDate() <= 30) {
@@ -1165,44 +1166,59 @@ function AdminPage() {
               </div>
               
               {/* Date-wise Filter Calendar Selector */}
-              <div className="flex items-center justify-between bg-card/60 p-2.5 rounded-2xl border border-gold/15 mb-4 shadow-xs select-none">
-                <button
-                  onClick={() => {
-                    if (selectedBookingDate !== "all") {
-                      const prev = selectedBookingDate - 1;
-                      if (prev >= 15) setSelectedBookingDate(prev);
-                    }
-                  }}
-                  disabled={selectedBookingDate === "all" || selectedBookingDate === 15}
-                  className="p-2 rounded-xl bg-card border border-gold/10 hover:bg-gold/10 disabled:opacity-30 disabled:hover:bg-transparent text-primary transition cursor-pointer"
-                >
-                  <ChevronLeft className="h-4.5 w-4.5" />
-                </button>
-
-                <div className="flex flex-col items-center gap-1.5 text-center">
-                  <span className="font-display font-extrabold text-sm tracking-wide text-primary">
-                    {selectedBookingDate === "all" ? "All Dates (Aug 15 - 30)" : `August ${selectedBookingDate}`}
-                  </span>
+              <div className="flex items-center gap-3 mb-4 bg-card/45 p-3 rounded-2xl border border-gold/10">
+                <span className="text-[10px] font-display uppercase tracking-widest text-muted-foreground font-extrabold">Select Date:</span>
+                <div className="relative flex-1 md:flex-none">
                   <button
-                    onClick={() => setSelectedBookingDate(selectedBookingDate === "all" ? 26 : "all")}
-                    className="text-[9px] uppercase font-bold tracking-wider text-gold hover:text-gold-dark transition underline decoration-dotted underline-offset-3 cursor-pointer"
+                    onClick={() => setShowDatePickerDropdown(!showDatePickerDropdown)}
+                    className="w-full md:w-auto rounded-full border border-gold/20 bg-card px-4 py-2 text-xs text-primary font-bold focus:outline-none flex items-center justify-between gap-3 cursor-pointer min-w-[150px] shadow-sm text-left"
                   >
-                    {selectedBookingDate === "all" ? "Filter by Date" : "Show All Dates"}
+                    <span>
+                      {selectedBookingDate === "all" ? "All Dates" : `${selectedBookingDate.toString().padStart(2, '0')}-08-2026`}
+                    </span>
+                    <Calendar className="h-3.5 w-3.5 text-gold" />
                   </button>
-                </div>
 
-                <button
-                  onClick={() => {
-                    if (selectedBookingDate !== "all") {
-                      const next = selectedBookingDate + 1;
-                      if (next <= 30) setSelectedBookingDate(next);
-                    }
-                  }}
-                  disabled={selectedBookingDate === "all" || selectedBookingDate === 30}
-                  className="p-2 rounded-xl bg-card border border-gold/10 hover:bg-gold/10 disabled:opacity-30 disabled:hover:bg-transparent text-primary transition cursor-pointer"
-                >
-                  <ChevronRight className="h-4.5 w-4.5" />
-                </button>
+                  {showDatePickerDropdown && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowDatePickerDropdown(false)} />
+                      <div className="absolute left-0 mt-1.5 w-44 rounded-2xl bg-card border border-gold/15 shadow-xl p-1.5 z-50 text-xs max-h-60 overflow-y-auto scrollbar-thin animate-scale-up">
+                        <button
+                          onClick={() => {
+                            setSelectedBookingDate("all");
+                            setShowDatePickerDropdown(false);
+                          }}
+                          className={`w-full text-left rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            selectedBookingDate === "all"
+                              ? "bg-primary text-white"
+                              : "text-muted-foreground hover:bg-gold/5 hover:text-primary"
+                          }`}
+                        >
+                          All Dates
+                        </button>
+                        {Array.from({ length: 16 }).map((_, i) => {
+                          const day = 15 + i;
+                          return (
+                            <button
+                              key={day}
+                              onClick={() => {
+                                setSelectedBookingDate(day);
+                                setShowDatePickerDropdown(false);
+                              }}
+                              className={`w-full text-left rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                                selectedBookingDate === day
+                                  ? "bg-primary text-white"
+                                  : "text-muted-foreground hover:bg-gold/5 hover:text-primary"
+                              }`}
+                            >
+                              {day.toString().padStart(2, '0')}-08-2026
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Search & Filters toolbar */}

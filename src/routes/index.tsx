@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Leaf,
   Download,
+  AlertTriangle,
 } from "lucide-react";
 
 import heroImg from "@/assets/onam-hero.jpg";
@@ -261,6 +262,13 @@ function OnamBookingApp() {
   const [detailPkg, setDetailPkg] = useState<PackageKey>("dinein");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState("");
+
+  const showError = (msg: string) => {
+    setErrorModalMessage(msg);
+    setShowErrorModal(true);
+  };
 
   // Customer Details Form State
   const [name, setName] = useState("");
@@ -659,49 +667,49 @@ Please present this QR code at entry. Thank you!`;
 
   const handleReserve = () => {
     if (!pkg) {
-      alert("Please select a package first.");
+      showError("Please select a package first.");
       return;
     }
     if (!date) {
-      alert("Please select a date first.");
+      showError("Please select a date first.");
       return;
     }
     if (pkg === "dinein" && !slot) {
-      alert("Please select a seating slot first.");
+      showError("Please select a seating slot first.");
       return;
     }
     if (!qty) {
-      alert("Please select guest quantity first.");
+      showError("Please select guest quantity first.");
       return;
     }
 
     if (closedDates.includes(date)) {
-      alert("This date is closed for bookings.");
+      showError("This date is closed for bookings.");
       return;
     }
     if (pkg === "dinein" && closedSlots.includes(`${date}-${slot}`)) {
-      alert("This seating slot is closed for bookings.");
+      showError("This seating slot is closed for bookings.");
       return;
     }
      if (!name.trim()) {
-      alert("Please enter your name");
+      showError("Please enter your name");
       return;
     }
     if (!phone.trim() || phone.length < 10) {
-      alert("Please enter a valid phone number");
+      showError("Please enter a valid 10-digit phone number");
       return;
     }
     if (!email.trim() || !email.includes("@")) {
-      alert("Please enter a valid email address");
+      showError("Please enter a valid email address");
       return;
     }
     if (pkg === "delivery" && !address.trim()) {
-      alert("Please enter your delivery address");
+      showError("Please enter your delivery address");
       return;
     }
 
     if (capacityInfo.remaining < qty) {
-      alert(`Only ${capacityInfo.remaining} slots/tickets remaining for this selection.`);
+      showError("Maximum capacity reached. The selected quantity exceeds the available limit for this date/slot. Please reduce your quantity and try again.");
       return;
     }
 
@@ -718,7 +726,7 @@ Please present this QR code at entry. Thank you!`;
           if (response.razorpay_payment_id) {
             completeBooking(response.razorpay_payment_id);
           } else {
-            alert("Payment failed or cancelled. Please try again.");
+            showError("Payment failed or cancelled. Please try again.");
           }
         },
         prefill: {
@@ -738,7 +746,7 @@ Please present this QR code at entry. Thank you!`;
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
     } else {
-      alert("Payment gateway failed to load. Please check your internet connection and reload the page.");
+      showError("Payment gateway failed to load. Please check your internet connection and reload the page.");
     }
   };
 
@@ -1340,14 +1348,18 @@ Please present this QR code at entry. Thank you!`;
                             <input
                               type="number"
                               min={1}
-                              max={capacityInfo.remaining}
                               value={qty || ""}
                               onChange={(e) => {
                                 const val = parseInt(e.target.value, 10);
                                 if (!isNaN(val)) {
-                                  setQty(Math.max(1, Math.min(capacityInfo.remaining, val)));
+                                  if (val > capacityInfo.remaining) {
+                                    showError("Maximum capacity reached. The entered quantity exceeds the available seats/tickets.");
+                                    setQty(capacityInfo.remaining);
+                                  } else {
+                                    setQty(Math.max(1, val));
+                                  }
                                 } else {
-                                  setQty(1);
+                                  setQty("");
                                 }
                               }}
                               className="w-20 text-center text-base font-black bg-transparent border-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-primary"
@@ -1359,7 +1371,14 @@ Please present this QR code at entry. Thank you!`;
 
                           <button
                             type="button"
-                            onClick={() => setQty(Math.min(capacityInfo.remaining, (qty || 0) + 1))}
+                            onClick={() => {
+                              const currentQty = qty || 0;
+                              if (currentQty >= capacityInfo.remaining) {
+                                showError("Maximum capacity reached. You cannot add more sadhyas/guests for this selection.");
+                              } else {
+                                setQty(currentQty + 1);
+                              }
+                            }}
                             className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary border border-secondary/20 shadow-sm transition hover:scale-105 cursor-pointer font-bold shrink-0"
                           >
                             +
@@ -1370,7 +1389,11 @@ Please present this QR code at entry. Thank you!`;
                           type="button"
                           onClick={() => {
                             if (!qty) {
-                              alert("Please select a quantity first.");
+                              showError("Please select a quantity first.");
+                              return;
+                            }
+                            if (qty > capacityInfo.remaining) {
+                              showError("Maximum capacity reached. Please reduce the quantity to proceed.");
                               return;
                             }
                             setSubStep(5);
@@ -1872,6 +1895,32 @@ Please present this QR code at entry. Thank you!`;
                 Close & Done
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Custom Error Popup Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-[360px] bg-card rounded-[32px] border border-gold/20 shadow-2xl p-6 flex flex-col items-center text-center animate-scale-up">
+            {/* Top red/gold line */}
+            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-maroon via-gold to-maroon" />
+
+            {/* Error/Warning Icon */}
+            <div className="mt-4 w-14 h-14 rounded-full bg-maroon/10 border border-maroon/30 flex items-center justify-center text-maroon animate-shake">
+              <AlertTriangle className="w-7 h-7 stroke-[2.5]" />
+            </div>
+
+            <h3 className="mt-4 font-display text-lg font-bold text-primary">Booking Alert</h3>
+            <p className="mt-3 text-xs text-primary/80 leading-relaxed font-semibold">
+              {errorModalMessage}
+            </p>
+
+            <button
+              onClick={() => setShowErrorModal(false)}
+              className="mt-6 w-full bg-[#1E4D3A] hover:bg-[#163a2c] text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition duration-200 cursor-pointer shadow-md"
+            >
+              Okay, I Understand
+            </button>
           </div>
         </div>
       )}
