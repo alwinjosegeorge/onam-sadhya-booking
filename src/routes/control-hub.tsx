@@ -1533,12 +1533,12 @@ function AdminPage() {
               {!scannerResult && (
                 <div className="mt-8 pt-6 border-t border-gold/15 w-full">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-3">Or enter booking ID manually</p>
-                  <div className="flex gap-2">
+                  <div className="flex items-stretch gap-2">
                     <input
                       type="text"
                       placeholder="e.g. OB-38810"
                       id="manual-checkin-id"
-                      className="flex-1 rounded-xl border border-gold/20 bg-card px-4 py-2.5 text-xs text-primary focus:border-gold focus:outline-none"
+                      className="flex-1 rounded-full border border-gold/20 bg-card px-5 py-3 text-xs text-primary focus:border-gold focus:outline-none"
                     />
                     <button
                       onClick={() => {
@@ -1547,7 +1547,7 @@ function AdminPage() {
                           handleScanSuccess(JSON.stringify({ bookingId: val }));
                         }
                       }}
-                      className="bg-primary text-white px-5 rounded-xl text-xs font-semibold uppercase tracking-wider hover:bg-primary/90 transition cursor-pointer"
+                      className="bg-primary text-white px-6 py-3 rounded-full text-xs font-semibold uppercase tracking-wider hover:bg-primary/90 transition cursor-pointer flex items-center justify-center shrink-0"
                     >
                       Verify
                     </button>
