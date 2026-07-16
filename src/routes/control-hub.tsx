@@ -874,7 +874,7 @@ function AdminPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3 self-end md:self-auto">
+          <div className="flex flex-wrap items-center justify-start md:justify-end gap-2 md:gap-3 w-full md:w-auto mt-2 md:mt-0">
             <button
               onClick={exportToCSV}
               className="glass-card flex items-center gap-2.5 rounded-full px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-primary hover:border-gold/40 hover:scale-102 transition cursor-pointer shadow-sm"
