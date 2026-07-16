@@ -264,10 +264,27 @@ function OnamBookingApp() {
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState("");
+  const [altSlots, setAltSlots] = useState<string[]>([]);
 
-  const showError = (msg: string) => {
+  const showError = (msg: string, alternatives: string[] = []) => {
     setErrorModalMessage(msg);
+    setAltSlots(alternatives);
     setShowErrorModal(true);
+  };
+
+  // Helper to find alternative slots with sufficient capacity
+  const getAlternativeSlots = (requestedQty: number) => {
+    if (pkg !== "dinein" || !date) return [];
+    return TIME_SLOTS.filter((t) => {
+      if (t === slot) return false;
+      const isClosed = closedSlots.includes(`${date}-${t}`) || closedDates.includes(date);
+      if (isClosed) return false;
+      const booked = bookings
+        .filter((b) => b.status === "confirmed" && b.package === "dinein" && b.date === date && b.slot === t)
+        .reduce((sum, b) => sum + b.qty, 0);
+      const remaining = Math.max(0, 200 - booked);
+      return remaining >= requestedQty;
+    });
   };
 
   // Customer Details Form State
@@ -709,7 +726,19 @@ Please present this QR code at entry. Thank you!`;
     }
 
     if (capacityInfo.remaining < qty) {
-      showError("Maximum capacity reached. The selected quantity exceeds the available limit for this date/slot. Please reduce your quantity and try again.");
+      if (pkg === "dinein") {
+        const alts = getAlternativeSlots(qty);
+        if (alts.length > 0) {
+          showError(
+            "Maximum capacity reached for the selected slot. Please select one of the alternative slots below with enough availability, or reduce your quantity.",
+            alts
+          );
+        } else {
+          showError("Maximum capacity reached. The selected quantity exceeds the available seats for this date/slot. Please reduce your quantity and try again.");
+        }
+      } else {
+        showError("Maximum capacity reached. The selected quantity exceeds the available limit for this date/slot. Please reduce your quantity and try again.");
+      }
       return;
     }
 
@@ -1353,7 +1382,19 @@ Please present this QR code at entry. Thank you!`;
                                 const val = parseInt(e.target.value, 10);
                                 if (!isNaN(val)) {
                                   if (val > capacityInfo.remaining) {
-                                    showError("Maximum capacity reached. The entered quantity exceeds the available seats/tickets.");
+                                    if (pkg === "dinein") {
+                                      const alts = getAlternativeSlots(val);
+                                      if (alts.length > 0) {
+                                        showError(
+                                          "Maximum capacity reached for this slot. The entered quantity exceeds the available seats. Would you like to switch to an alternative slot with enough seats?",
+                                          alts
+                                        );
+                                      } else {
+                                        showError("Maximum capacity reached. The entered quantity exceeds the available seats.");
+                                      }
+                                    } else {
+                                      showError("Maximum capacity reached. The entered quantity exceeds the available seats.");
+                                    }
                                     setQty(capacityInfo.remaining);
                                   } else {
                                     setQty(Math.max(1, val));
@@ -1373,10 +1414,23 @@ Please present this QR code at entry. Thank you!`;
                             type="button"
                             onClick={() => {
                               const currentQty = qty || 0;
-                              if (currentQty >= capacityInfo.remaining) {
-                                showError("Maximum capacity reached. You cannot add more sadhyas/guests for this selection.");
+                              const targetQty = currentQty + 1;
+                              if (targetQty > capacityInfo.remaining) {
+                                if (pkg === "dinein") {
+                                  const alts = getAlternativeSlots(targetQty);
+                                  if (alts.length > 0) {
+                                    showError(
+                                      "Maximum capacity reached for the selected slot. However, these other slots on the same day have enough available seats. Would you like to switch?",
+                                      alts
+                                    );
+                                  } else {
+                                    showError("Maximum capacity reached. The selected slot is full and no other slots on this date have enough space for your group.");
+                                  }
+                                } else {
+                                  showError("Maximum capacity reached. You cannot add more sadhyas/guests for this selection.");
+                                }
                               } else {
-                                setQty(currentQty + 1);
+                                setQty(targetQty);
                               }
                             }}
                             className="grid h-8 w-8 place-items-center rounded-full bg-white text-primary border border-secondary/20 shadow-sm transition hover:scale-105 cursor-pointer font-bold shrink-0"
@@ -1393,7 +1447,19 @@ Please present this QR code at entry. Thank you!`;
                               return;
                             }
                             if (qty > capacityInfo.remaining) {
-                              showError("Maximum capacity reached. Please reduce the quantity to proceed.");
+                              if (pkg === "dinein") {
+                                const alts = getAlternativeSlots(qty);
+                                if (alts.length > 0) {
+                                  showError(
+                                    "Maximum capacity reached for the selected slot. Please select one of the alternative slots below with enough seats, or reduce your quantity.",
+                                    alts
+                                  );
+                                } else {
+                                  showError("Maximum capacity reached for the selected slot. Please reduce the quantity to proceed.");
+                                }
+                              } else {
+                                showError("Maximum capacity reached. Please reduce the quantity to proceed.");
+                              }
                               return;
                             }
                             setSubStep(5);
@@ -1915,11 +1981,35 @@ Please present this QR code at entry. Thank you!`;
               {errorModalMessage}
             </p>
 
+            {altSlots.length > 0 && (
+              <div className="mt-5 w-full space-y-2.5 border-t border-gold/10 pt-4">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-extrabold text-left mb-1.5">
+                  Available Alternative Slots:
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {altSlots.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setSlot(s);
+                        setShowErrorModal(false);
+                      }}
+                      className="px-3 py-2.5 rounded-xl border border-gold/20 bg-card hover:bg-[#1E4D3A] hover:text-white transition duration-200 text-xs font-bold text-primary flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+                    >
+                      <Clock className="h-3.5 w-3.5" />
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={() => setShowErrorModal(false)}
               className="mt-6 w-full bg-[#1E4D3A] hover:bg-[#163a2c] text-white py-3.5 rounded-full font-bold text-xs uppercase tracking-wider transition duration-200 cursor-pointer shadow-md"
             >
-              Okay, I Understand
+              {altSlots.length > 0 ? "Cancel" : "Okay, I Understand"}
             </button>
           </div>
         </div>
