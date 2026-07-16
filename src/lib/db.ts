@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 
 const DATABASE_URL = 
-  process.env.DATABASE_URL || 
+  (typeof process !== "undefined" ? process.env.DATABASE_URL : undefined) || 
   "postgresql://neondb_owner:npg_zblnHwWQj26J@ep-empty-tooth-azitpalq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
 
 // Initialize SQL HTTP client
