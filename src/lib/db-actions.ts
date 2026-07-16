@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sql, initDb } from "./db";
 
 // Interface matching the client-side Booking type
 export interface DbBooking {
@@ -24,6 +23,7 @@ export interface DbBooking {
 let isDbInitialized = false;
 async function ensureDb() {
   if (!isDbInitialized) {
+    const { initDb } = await import("./db");
     await initDb();
     isDbInitialized = true;
   }
@@ -53,6 +53,7 @@ function mapRowToBooking(row: any): DbBooking {
 // Fetch all bookings
 export const getBookingsFn = createServerFn("GET", async () => {
   await ensureDb();
+  const { sql } = await import("./db");
   try {
     const rows = await sql`SELECT * FROM onam_bookings ORDER BY created_at DESC`;
     return rows.map(mapRowToBooking);
@@ -65,6 +66,7 @@ export const getBookingsFn = createServerFn("GET", async () => {
 // Insert new booking
 export const createBookingFn = createServerFn("POST", async (b: DbBooking) => {
   await ensureDb();
+  const { sql } = await import("./db");
   try {
     await sql`
       INSERT INTO onam_bookings (
@@ -85,6 +87,7 @@ export const updateBookingStatusFn = createServerFn(
   "POST",
   async ({ id, status }: { id: string; status: "confirmed" | "cancelled" }) => {
     await ensureDb();
+    const { sql } = await import("./db");
     try {
       await sql`UPDATE onam_bookings SET status = ${status} WHERE id = ${id}`;
       return { success: true };
@@ -100,6 +103,7 @@ export const markBookingCheckedInFn = createServerFn(
   "POST",
   async ({ id, checkedIn }: { id: string; checkedIn: boolean }) => {
     await ensureDb();
+    const { sql } = await import("./db");
     try {
       await sql`UPDATE onam_bookings SET checked_in = ${checkedIn} WHERE id = ${id}`;
       return { success: true };
@@ -113,6 +117,7 @@ export const markBookingCheckedInFn = createServerFn(
 // Fetch settings (closed dates & closed slots)
 export const getSettingsFn = createServerFn("GET", async () => {
   await ensureDb();
+  const { sql } = await import("./db");
   try {
     const rows = await sql`SELECT * FROM onam_settings`;
     const settings: Record<string, string> = {};
@@ -134,6 +139,7 @@ export const saveSettingsFn = createServerFn(
   "POST",
   async ({ closedDates, closedSlots }: { closedDates: number[]; closedSlots: string[] }) => {
     await ensureDb();
+    const { sql } = await import("./db");
     try {
       // Save closed dates
       await sql`
