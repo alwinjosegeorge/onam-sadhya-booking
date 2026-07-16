@@ -541,7 +541,7 @@ Please present this QR code at entry. Thank you!`;
     // Trigger Razorpay Checkout
     if (typeof window !== "undefined" && (window as any).Razorpay) {
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_rB8E3UvL8vD3d2", // Test Key fallback
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_TE3BRj3yuVK819", // Test Key fallback
         amount: total * 100, // Amount in paise
         currency: "INR",
         name: "Kadambrayar Onachamayam",
