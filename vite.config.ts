@@ -15,6 +15,7 @@ export default defineConfig({
     }),
     nitro({
       preset: "vercel",
+      baseURL: "/onam",
     }),
     viteReact(),
   ],
