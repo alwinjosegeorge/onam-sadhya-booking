@@ -337,35 +337,7 @@ function OnamBookingApp() {
     };
   }, []);
 
-  // Video Playlist Configuration
-  const VIDEOS = useMemo(() => {
-    const base = import.meta.env.BASE_URL || "/";
-    const cleanBase = base.endsWith("/") ? base.slice(0, -1) : base;
-    return [`${cleanBase}/lv_0_20260715160043.mp4`];
-  }, []);
 
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
-
-  useEffect(() => {
-    // Play the current video index, pause the others
-    videoRefs.current.forEach((video, idx) => {
-      if (!video) return;
-      video.muted = true; // Force muted programmatically to bypass React 19 hydration autoplay block
-      if (idx === currentVideoIndex) {
-        video.currentTime = 0; // reset to start
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch((error) => {
-            console.log("Autoplay prevented or video interrupted:", error);
-          });
-        }
-      } else {
-        // Pause inactive videos to save CPU
-        video.pause();
-      }
-    });
-  }, [currentVideoIndex]);
 
   // Generate August booking days list (Aug 15 to Aug 30) for horizontal scrolling
   const bookingDays = useMemo(() => {
@@ -889,39 +861,27 @@ Please present this QR code at entry. Thank you!`;
       {/* Background Video Hero Section */}
       <section className="relative w-full min-h-[95vh] md:min-h-screen flex flex-col justify-between overflow-hidden border-b border-gold/15 bg-primary/95 text-ivory">
         
-        {/* Background Video Playlist (Crossfade Double-Buffering for Zero Lag) */}
-        {VIDEOS.map((src, idx) => {
-          const isCurrent = currentVideoIndex === idx;
-          return (
-            <video
-              key={src}
-              ref={(el) => {
-                videoRefs.current[idx] = el;
-              }}
-              src={src}
-              muted
-              playsInline
-              autoPlay
-              loop={VIDEOS.length === 1}
-              onEnded={() => {
-                if (isCurrent) {
-                  if (VIDEOS.length > 1) {
-                    setCurrentVideoIndex((prev) => (prev + 1) % VIDEOS.length);
-                  } else {
-                    if (videoRefs.current[idx]) {
-                      videoRefs.current[idx]!.currentTime = 0;
-                      videoRefs.current[idx]!.play().catch((err) => console.log(err));
-                    }
-                  }
-                }
-              }}
-              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-in-out ${
-                isCurrent ? "opacity-60 pointer-events-auto" : "opacity-0 pointer-events-none"
-              }`}
-              preload="auto"
-            />
-          );
-        })}
+        {/* Background Video (Cloudinary Iframe Embed styled as object-cover) */}
+        <div className="absolute inset-0 h-full w-full overflow-hidden pointer-events-none">
+          <iframe
+            src="https://player.cloudinary.com/embed/?cloud_name=dar4m0jyt&public_id=lv_0_20260715160043_ubli1p&autoplay=true&loop=true&muted=true&controls=false"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+            allowFullScreen
+            frameBorder="0"
+            className="opacity-60"
+            style={{
+              border: "none",
+              height: "100vh",
+              width: "177.77777778vh", // 16:9 aspect ratio width calculation
+              minWidth: "100%",
+              minHeight: "56.25vw", // 16:9 aspect ratio height calculation
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+          />
+        </div>
         
         {/* Dark overlay with green tint */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/90 via-primary/50 to-primary/90 mix-blend-multiply" />
