@@ -1024,10 +1024,9 @@ Please present this QR code at entry. Thank you!`;
                       <h3 className="font-display text-2xl font-bold text-primary">
                         Onam Sadya
                       </h3>
-                      <div className="flex items-baseline gap-1 mt-1 text-[#C89B3C]">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider opacity-90">From</span>
-                        <span className="text-2xl font-black font-display">₹499</span>
-                        <span className="text-[9px] font-semibold text-muted-foreground/80 uppercase tracking-widest ml-1">Per Person</span>
+                      <div className="flex items-baseline gap-1.5 mt-1">
+                        <span className="text-3xl font-display font-black text-[#C89B3C]">₹499</span>
+                        <span className="text-xs font-semibold text-primary/50 lowercase">/ person</span>
                       </div>
                     </div>
                     <ul className="space-y-3">
@@ -1077,10 +1076,9 @@ Please present this QR code at entry. Thank you!`;
                       <h3 className="font-display text-2xl font-bold text-primary leading-tight">
                         Sadya at Home
                       </h3>
-                      <div className="flex items-baseline gap-1 mt-1 text-[#C89B3C]">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider opacity-90">From</span>
-                        <span className="text-2xl font-black font-display">₹599</span>
-                        <span className="text-[9px] font-semibold text-muted-foreground/80 uppercase tracking-widest ml-1">Per Person</span>
+                      <div className="flex items-baseline gap-1.5 mt-1">
+                        <span className="text-3xl font-display font-black text-[#C89B3C]">₹599</span>
+                        <span className="text-xs font-semibold text-primary/50 lowercase">/ person</span>
                       </div>
                     </div>
                     <ul className="space-y-3">
@@ -1130,10 +1128,9 @@ Please present this QR code at entry. Thank you!`;
                       <h3 className="font-display text-2xl font-bold text-primary leading-tight">
                         One Day Experience
                       </h3>
-                      <div className="flex items-baseline gap-1 mt-1 text-[#C89B3C]">
-                        <span className="text-[9px] font-extrabold uppercase tracking-wider opacity-90">From</span>
-                        <span className="text-2xl font-black font-display">₹1299</span>
-                        <span className="text-[9px] font-semibold text-muted-foreground/80 uppercase tracking-widest ml-1">Per Person</span>
+                      <div className="flex items-baseline gap-1.5 mt-1">
+                        <span className="text-3xl font-display font-black text-[#C89B3C]">₹1299</span>
+                        <span className="text-xs font-semibold text-primary/50 lowercase">/ person</span>
                       </div>
                     </div>
                     <ul className="space-y-3">
