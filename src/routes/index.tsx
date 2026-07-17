@@ -1056,18 +1056,20 @@ Please present this QR code at entry. Thank you!`;
                   <div className="absolute top-4 left-4 bg-white/90 text-primary text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm">
                     Dine-In
                   </div>
-                  <div className="absolute top-4 right-4 bg-[#C89B3C] text-white rounded-2xl px-4 py-2 flex flex-col items-center justify-center shadow-md border border-[#F4E2B1]/40 leading-none">
-                    <span className="text-[7px] font-extrabold tracking-widest uppercase opacity-75">From</span>
-                    <span className="text-sm font-black mt-0.5">₹499</span>
-                    <span className="text-[6.5px] font-extrabold tracking-wider uppercase mt-0.5">Per Person</span>
-                  </div>
                 </div>
                 
                 <div className="p-6 md:p-8 flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
-                    <h3 className="font-display text-2xl font-bold text-primary">
-                      Onam Sadya
-                    </h3>
+                    <div>
+                      <h3 className="font-display text-2xl font-bold text-primary">
+                        Onam Sadya
+                      </h3>
+                      <div className="flex items-baseline gap-1 mt-1 text-[#C89B3C]">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider opacity-90">From</span>
+                        <span className="text-2xl font-black font-display">₹499</span>
+                        <span className="text-[9px] font-semibold text-muted-foreground/80 uppercase tracking-widest ml-1">Per Person</span>
+                      </div>
+                    </div>
                     <ul className="space-y-3">
                       <li className="flex items-center gap-2 text-xs font-semibold text-primary/70">
                         <Leaf className="h-3.5 w-3.5 text-leaf fill-leaf/10 shrink-0" />
@@ -1107,18 +1109,20 @@ Please present this QR code at entry. Thank you!`;
                   <div className="absolute top-4 left-4 bg-white/90 text-primary text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm">
                     Delivery
                   </div>
-                  <div className="absolute top-4 right-4 bg-[#C89B3C] text-white rounded-2xl px-4 py-2 flex flex-col items-center justify-center shadow-md border border-[#F4E2B1]/40 leading-none">
-                    <span className="text-[7px] font-extrabold tracking-widest uppercase opacity-75">From</span>
-                    <span className="text-sm font-black mt-0.5">₹599</span>
-                    <span className="text-[6.5px] font-extrabold tracking-wider uppercase mt-0.5">Per Person</span>
-                  </div>
                 </div>
                 
                 <div className="p-6 md:p-8 flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
-                    <h3 className="font-display text-2xl font-bold text-primary">
-                      Sadya at Home
-                    </h3>
+                    <div>
+                      <h3 className="font-display text-2xl font-bold text-primary leading-tight">
+                        Sadya at Home
+                      </h3>
+                      <div className="flex items-baseline gap-1 mt-1 text-[#C89B3C]">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider opacity-90">From</span>
+                        <span className="text-2xl font-black font-display">₹599</span>
+                        <span className="text-[9px] font-semibold text-muted-foreground/80 uppercase tracking-widest ml-1">Per Person</span>
+                      </div>
+                    </div>
                     <ul className="space-y-3">
                       <li className="flex items-center gap-2 text-xs font-semibold text-primary/70">
                         <Leaf className="h-3.5 w-3.5 text-leaf fill-leaf/10 shrink-0" />
@@ -1158,18 +1162,20 @@ Please present this QR code at entry. Thank you!`;
                   <div className="absolute top-4 left-4 bg-white/90 text-primary text-[9px] font-extrabold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-sm">
                     Full Day
                   </div>
-                  <div className="absolute top-4 right-4 bg-[#C89B3C] text-white rounded-2xl px-4 py-2 flex flex-col items-center justify-center shadow-md border border-[#F4E2B1]/40 leading-none">
-                    <span className="text-[7px] font-extrabold tracking-widest uppercase opacity-75">From</span>
-                    <span className="text-sm font-black mt-0.5">₹1299</span>
-                    <span className="text-[6.5px] font-extrabold tracking-wider uppercase mt-0.5">Per Person</span>
-                  </div>
                 </div>
                 
                 <div className="p-6 md:p-8 flex-1 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
-                    <h3 className="font-display text-2xl font-bold text-primary">
-                      One Day Experience
-                    </h3>
+                    <div>
+                      <h3 className="font-display text-2xl font-bold text-primary leading-tight">
+                        One Day Experience
+                      </h3>
+                      <div className="flex items-baseline gap-1 mt-1 text-[#C89B3C]">
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider opacity-90">From</span>
+                        <span className="text-2xl font-black font-display">₹1299</span>
+                        <span className="text-[9px] font-semibold text-muted-foreground/80 uppercase tracking-widest ml-1">Per Person</span>
+                      </div>
+                    </div>
                     <ul className="space-y-3">
                       <li className="flex items-center gap-2 text-xs font-semibold text-primary/70">
                         <Leaf className="h-3.5 w-3.5 text-leaf fill-leaf/10 shrink-0" />
