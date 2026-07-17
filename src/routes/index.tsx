@@ -871,10 +871,10 @@ Please present this QR code at entry. Thank you!`;
             className="opacity-60"
             style={{
               border: "none",
-              height: "100vh",
-              width: "177.77777778vh", // 16:9 aspect ratio width calculation
-              minWidth: "100%",
-              minHeight: "56.25vw", // 16:9 aspect ratio height calculation
+              width: "100vw",
+              height: "177.77777778vw", // 16:9 vertical scale calculation for portrait video
+              minHeight: "100vh",
+              minWidth: "56.25vh", // 9:16 width fallback calculation
               position: "absolute",
               top: "50%",
               left: "50%",
