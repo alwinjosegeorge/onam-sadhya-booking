@@ -527,15 +527,17 @@ function AdminPage() {
       ctx.font = "bold italic 13px 'Playfair Display', serif";
       ctx.textAlign = "center";
       ctx.fillText("Happy Onam!", canvas.width / 2, canvas.height - 25);
-
       try {
+        const imgData = canvas.toDataURL("image/png");
         const link = document.createElement("a");
         link.download = `onam-sadhya-ticket-${b.id}.png`;
-        link.href = canvas.toDataURL("image/png");
+        link.href = imgData;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
       } catch (err) {
         console.error("Failed to export ticket image:", err);
-        alert("Failed to download ticket as image.");
+        alert("Failed to download ticket as image. Please take a screenshot.");
       }
     };
 
