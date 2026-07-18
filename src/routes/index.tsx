@@ -269,6 +269,11 @@ function OnamBookingApp() {
   const [errorModalMessage, setErrorModalMessage] = useState("");
   const [altSlots, setAltSlots] = useState<string[]>([]);
 
+  // Search Ticket by Phone state
+  const [searchPhone, setSearchPhone] = useState("");
+  const [searchResults, setSearchResults] = useState<Booking[] | null>(null);
+  const [searchError, setSearchError] = useState("");
+
   useEffect(() => {
     if (createdBooking) {
       const payload = JSON.stringify({
@@ -285,6 +290,32 @@ function OnamBookingApp() {
       setQrDataUrl("");
     }
   }, [createdBooking]);
+
+  const handleSearchTicketByPhone = () => {
+    setSearchError("");
+    setSearchResults(null);
+
+    const clean = searchPhone.replace(/\D/g, "");
+    if (!clean || clean.length < 10) {
+      setSearchError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    const matches = bookings.filter((b) => {
+      const bClean = b.phone.replace(/\D/g, "");
+      return bClean.endsWith(clean) || clean.endsWith(bClean.slice(-10));
+    });
+
+    if (matches.length === 0) {
+      setSearchError(`No booking found for ${clean}. Please verify your phone number or place a new booking above.`);
+    } else if (matches.length === 1) {
+      setCreatedBooking(matches[0]);
+      setShowSuccessModal(true);
+      setSearchPhone("");
+    } else {
+      setSearchResults(matches);
+    }
+  };
 
   const showError = (msg: string, alternatives: string[] = []) => {
     setErrorModalMessage(msg);
@@ -1652,6 +1683,83 @@ Please present this QR code at entry. Thank you!`;
 
               </div>
 
+            </div>
+          </section>
+
+          {/* Retrieve / Find My Ticket Section */}
+          <section id="retrieve-ticket" className="max-w-3xl mx-auto w-full animate-fade-up py-6 px-4">
+            <div className="bg-card/90 backdrop-blur border border-gold/25 rounded-3xl p-6 md:p-10 shadow-xl relative overflow-hidden text-center">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gold/5 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="inline-flex items-center justify-center p-3 rounded-full bg-gold/10 text-gold mb-3">
+                <Ticket className="h-6 w-6" />
+              </div>
+              
+              <h3 className="font-display text-2xl md:text-3xl font-bold text-primary">
+                Already Booked? Retrieve Your Ticket
+              </h3>
+              <p className="text-xs md:text-sm text-primary/70 max-w-md mx-auto mt-2 font-medium">
+                Enter the mobile number used during booking to view and download your digital QR entry pass.
+              </p>
+
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSearchTicketByPhone();
+                }}
+                className="mt-6 max-w-md mx-auto flex flex-col sm:flex-row items-center gap-3"
+              >
+                <div className="relative flex-1 w-full">
+                  <input
+                    type="tel"
+                    placeholder="Enter 10-digit Mobile Number"
+                    value={searchPhone}
+                    onChange={(e) => setSearchPhone(e.target.value)}
+                    maxLength={10}
+                    className="w-full h-12 rounded-full border border-gold/30 bg-white px-5 text-xs font-semibold text-primary placeholder:text-muted-foreground/60 focus:border-gold focus:outline-none shadow-inner tracking-wider"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto h-12 px-8 rounded-full bg-gold text-primary font-bold text-xs uppercase tracking-widest hover:bg-gold-light hover:shadow-lg transition cursor-pointer flex items-center justify-center shrink-0"
+                >
+                  Find Ticket
+                </button>
+              </form>
+
+              {searchError && (
+                <div className="mt-4 p-3 rounded-2xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-semibold max-w-md mx-auto animate-fade-in">
+                  {searchError}
+                </div>
+              )}
+
+              {searchResults && searchResults.length > 1 && (
+                <div className="mt-6 max-w-md mx-auto space-y-3 text-left animate-fade-in">
+                  <p className="text-xs font-bold text-primary uppercase tracking-wider">
+                    Found {searchResults.length} Bookings:
+                  </p>
+                  {searchResults.map((b) => (
+                    <div 
+                      key={b.id}
+                      className="p-4 rounded-2xl bg-white border border-gold/20 flex items-center justify-between shadow-sm hover:border-gold/50 transition cursor-pointer"
+                      onClick={() => {
+                        setCreatedBooking(b);
+                        setShowSuccessModal(true);
+                      }}
+                    >
+                      <div>
+                        <span className="text-xs font-extrabold text-primary font-display">{b.id}</span>
+                        <p className="text-[11px] text-primary/70 font-medium mt-0.5">
+                          Aug {b.date}, 2026 • {b.package === "dinein" ? "Dine-In" : b.package === "delivery" ? "Home Delivery" : "Celebration"}
+                        </p>
+                      </div>
+                      <button className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider bg-primary text-white rounded-full hover:bg-primary/90 transition">
+                        View Ticket
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
