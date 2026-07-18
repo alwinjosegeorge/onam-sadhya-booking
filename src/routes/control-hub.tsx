@@ -628,8 +628,8 @@ function AdminPage() {
         return;
       }
 
-      // Check validation token to prevent fraud
-      if (matched.token !== bToken) {
+      // Check validation token to prevent fraud (if token is included in scanned QR)
+      if (bToken && matched.token && matched.token !== bToken) {
         setScannerResult({
           status: "error",
           message: "Verification failed! Security token is invalid or faked.",
