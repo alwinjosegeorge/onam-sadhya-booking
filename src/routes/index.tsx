@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, useRef } from "react";
+import QRCode from "qrcode";
 import { getBookingsFn, createBookingFn, getSettingsFn } from "@/lib/db-actions";
 import {
   Home,
@@ -263,9 +264,27 @@ function OnamBookingApp() {
   const [detailPkg, setDetailPkg] = useState<PackageKey>("dinein");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdBooking, setCreatedBooking] = useState<Booking | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState("");
   const [altSlots, setAltSlots] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (createdBooking) {
+      const payload = JSON.stringify({
+        bookingId: createdBooking.id,
+        token: createdBooking.token,
+      });
+      QRCode.toDataURL(payload, { width: 300, margin: 1 })
+        .then((url) => setQrDataUrl(url))
+        .catch((err) => {
+          console.error("Failed to generate QR data URL:", err);
+          setQrDataUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payload)}`);
+        });
+    } else {
+      setQrDataUrl("");
+    }
+  }, [createdBooking]);
 
   const showError = (msg: string, alternatives: string[] = []) => {
     setErrorModalMessage(msg);
@@ -475,21 +494,28 @@ function OnamBookingApp() {
     setShowSuccessModal(true);
   };
 
-  const handleDownloadTicket = (b: Booking) => {
+  const handleDownloadTicket = async (b: Booking) => {
     const canvas = document.createElement("canvas");
     canvas.width = 400;
     canvas.height = 680;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const qrPayload = JSON.stringify({
+      bookingId: b.id,
+      token: b.token,
+    });
+
+    let dataUri = "";
+    try {
+      dataUri = await QRCode.toDataURL(qrPayload, { width: 300, margin: 1 });
+    } catch {
+      dataUri = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
+    }
+
     const qrImg = new Image();
     qrImg.crossOrigin = "anonymous";
-    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-      JSON.stringify({
-        bookingId: b.id,
-        token: b.token,
-      })
-    )}`;
+    qrImg.src = dataUri;
 
     qrImg.onload = () => {
       // Background
@@ -1865,16 +1891,17 @@ Please present this QR code at entry. Thank you!`;
             <div className="mt-6 w-full bg-[#FAF9F6] border border-[#EAE6DF] rounded-[24px] p-5 flex flex-col items-center">
               <span className="text-[9px] font-extrabold text-muted-foreground uppercase tracking-widest mb-3">Gate Entry QR Code</span>
               <div className="relative w-44 h-44 bg-white border border-[#EAE6DF] rounded-2xl p-2 flex items-center justify-center shadow-sm">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                    JSON.stringify({
-                      bookingId: createdBooking.id,
-                      token: createdBooking.token,
-                    })
-                  )}`}
-                  alt="Entry Ticket QR"
-                  className="w-full h-full object-contain"
-                />
+                {qrDataUrl ? (
+                  <img
+                    src={qrDataUrl}
+                    alt="Entry Ticket QR"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="animate-pulse flex items-center justify-center text-xs text-muted-foreground font-semibold">
+                    Generating QR...
+                  </div>
+                )}
               </div>
               <p className="mt-3 text-[9px] text-primary/70 font-semibold max-w-[200px] leading-normal">
                 Please present this QR ticket at check-in or delivery.

@@ -1,5 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
+import QRCode from "qrcode";
 import { 
   getBookingsFn, 
   createBookingFn, 
@@ -115,6 +116,24 @@ function AdminPage() {
   } | null>(null);
   const [scannerInst, setScannerInst] = useState<any>(null);
   const [selectedBookingForQr, setSelectedBookingForQr] = useState<Booking | null>(null);
+  const [qrModalUrl, setQrModalUrl] = useState<string>("");
+
+  useEffect(() => {
+    if (selectedBookingForQr) {
+      const payload = JSON.stringify({
+        bookingId: selectedBookingForQr.id,
+        token: selectedBookingForQr.token || "",
+      });
+      QRCode.toDataURL(payload, { width: 300, margin: 1 })
+        .then((url) => setQrModalUrl(url))
+        .catch((err) => {
+          console.error("Failed to generate QR data URL:", err);
+          setQrModalUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payload)}`);
+        });
+    } else {
+      setQrModalUrl("");
+    }
+  }, [selectedBookingForQr]);
 
   // Read session auth on mount and load storage items
   useEffect(() => {
@@ -378,21 +397,28 @@ function AdminPage() {
     });
   };
 
-  const handleDownloadTicket = (b: Booking) => {
+  const handleDownloadTicket = async (b: Booking) => {
     const canvas = document.createElement("canvas");
     canvas.width = 400;
     canvas.height = 680;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const qrPayload = JSON.stringify({
+      bookingId: b.id,
+      token: b.token || "",
+    });
+
+    let dataUri = "";
+    try {
+      dataUri = await QRCode.toDataURL(qrPayload, { width: 300, margin: 1 });
+    } catch {
+      dataUri = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
+    }
+
     const qrImg = new Image();
     qrImg.crossOrigin = "anonymous";
-    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-      JSON.stringify({
-        bookingId: b.id,
-        token: b.token || "",
-      })
-    )}`;
+    qrImg.src = dataUri;
 
     qrImg.onload = () => {
       // Background
@@ -1795,16 +1821,17 @@ function AdminPage() {
             
             {/* QR Image */}
             <div className="relative w-44 h-44 bg-white border border-[#EAE6DF] rounded-2xl p-2 flex items-center justify-center shadow-sm">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                  JSON.stringify({
-                    bookingId: selectedBookingForQr.id,
-                    token: selectedBookingForQr.token,
-                  })
-                )}`}
-                alt="Entry Ticket QR"
-                className="w-full h-full object-contain"
-              />
+              {qrModalUrl ? (
+                <img
+                  src={qrModalUrl}
+                  alt="Entry Ticket QR"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="animate-pulse flex items-center justify-center text-xs text-muted-foreground font-semibold">
+                  Generating QR...
+                </div>
+              )}
             </div>
             
             <p className="mt-3 text-[9px] text-primary/70 font-semibold max-w-[200px] leading-normal mb-5">
