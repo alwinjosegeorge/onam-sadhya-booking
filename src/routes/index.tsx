@@ -274,6 +274,30 @@ function OnamBookingApp() {
   const [searchResults, setSearchResults] = useState<Booking[] | null>(null);
   const [searchError, setSearchError] = useState("");
 
+  // Hero Video Playlist states
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  const backgroundVideos = useMemo(() => [
+    `${import.meta.env.BASE_URL}VN20260713_134130~2.mp4`,
+    `${import.meta.env.BASE_URL}VN20260714_144155~2.mp4`,
+    `${import.meta.env.BASE_URL}VN20260714_150941~2.mp4`
+  ], []);
+
+  useEffect(() => {
+    backgroundVideos.forEach((_, idx) => {
+      const el = videoRefs.current[idx];
+      if (el) {
+        if (idx === currentVideoIndex) {
+          el.play().catch((err) => console.log("Background video play failed:", err));
+        } else {
+          el.pause();
+          el.currentTime = 0;
+        }
+      }
+    });
+  }, [currentVideoIndex, backgroundVideos]);
+
   useEffect(() => {
     if (createdBooking) {
       const payload = JSON.stringify({
@@ -921,26 +945,26 @@ Please present this QR code at entry. Thank you!`;
       {/* Background Video Hero Section */}
       <section className="relative w-full min-h-[95vh] md:min-h-screen flex flex-col justify-between overflow-hidden border-b border-gold/15 bg-primary/95 text-ivory">
         
-        {/* Background Video (Cloudinary Iframe Embed styled as object-cover) */}
+        {/* Background Video Playlist Loop */}
         <div className="absolute inset-0 h-full w-full overflow-hidden pointer-events-none">
-          <iframe
-            src="https://player.cloudinary.com/embed/?cloud_name=dar4m0jyt&public_id=lv_0_20260715160043_ubli1p&autoplay=true&loop=true&muted=true&controls=false"
-            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-            allowFullScreen
-            frameBorder="0"
-            className="opacity-60"
-            style={{
-              border: "none",
-              width: "100vw",
-              height: "177.77777778vw", // 16:9 vertical scale calculation for portrait video
-              minHeight: "100vh",
-              minWidth: "56.25vh", // 9:16 width fallback calculation
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-            }}
-          />
+          {backgroundVideos.map((src, index) => (
+            <video
+              key={src}
+              src={src}
+              muted
+              playsInline
+              preload="auto"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
+                index === currentVideoIndex ? "opacity-60 z-10" : "opacity-0 z-0"
+              }`}
+              ref={(el) => {
+                videoRefs.current[index] = el;
+              }}
+              onEnded={() => {
+                setCurrentVideoIndex((prev) => (prev + 1) % backgroundVideos.length);
+              }}
+            />
+          ))}
         </div>
         
         {/* Dark overlay with green tint */}
