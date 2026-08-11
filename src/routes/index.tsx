@@ -274,29 +274,7 @@ function OnamBookingApp() {
   const [searchResults, setSearchResults] = useState<Booking[] | null>(null);
   const [searchError, setSearchError] = useState("");
 
-  // Hero Video Playlist states
-  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
-  const backgroundVideos = useMemo(() => [
-    `${import.meta.env.BASE_URL}VN20260713_134130~2.mp4`,
-    `${import.meta.env.BASE_URL}VN20260714_144155~2.mp4`,
-    `${import.meta.env.BASE_URL}VN20260714_150941~2.mp4`
-  ], []);
-
-  useEffect(() => {
-    backgroundVideos.forEach((_, idx) => {
-      const el = videoRefs.current[idx];
-      if (el) {
-        if (idx === currentVideoIndex) {
-          el.play().catch((err) => console.log("Background video play failed:", err));
-        } else {
-          el.pause();
-          el.currentTime = 0;
-        }
-      }
-    });
-  }, [currentVideoIndex, backgroundVideos]);
 
   useEffect(() => {
     if (createdBooking) {
@@ -945,26 +923,13 @@ Please present this QR code at entry. Thank you!`;
       {/* Background Video Hero Section */}
       <section className="relative w-full min-h-[95vh] md:min-h-screen flex flex-col justify-between overflow-hidden border-b border-gold/15 bg-primary/95 text-ivory">
         
-        {/* Background Video Playlist Loop */}
+        {/* Static Background Image */}
         <div className="absolute inset-0 h-full w-full overflow-hidden pointer-events-none">
-          {backgroundVideos.map((src, index) => (
-            <video
-              key={src}
-              src={src}
-              muted
-              playsInline
-              preload="auto"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${
-                index === currentVideoIndex ? "opacity-60 z-10" : "opacity-0 z-0"
-              }`}
-              ref={(el) => {
-                videoRefs.current[index] = el;
-              }}
-              onEnded={() => {
-                setCurrentVideoIndex((prev) => (prev + 1) % backgroundVideos.length);
-              }}
-            />
-          ))}
+          <img
+            src={heroImg}
+            alt="Onam Background"
+            className="absolute inset-0 w-full h-full object-cover opacity-45"
+          />
         </div>
         
         {/* Dark overlay with green tint */}
