@@ -1,7 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, useRef } from "react";
 import QRCode from "qrcode";
-import { getBookingsFn, createBookingFn, getSettingsFn } from "@/lib/db-actions";
+import { getBookingsFn, createBookingFn, getSettingsFn, createRazorpayOrderFn, verifyRazorpayPaymentFn } from "@/lib/db-actions";
 import {
   Home,
   Ticket,
@@ -783,36 +783,73 @@ Please present this QR code at entry. Thank you!`;
 
     // Trigger Razorpay Checkout
     if (typeof window !== "undefined" && (window as any).Razorpay) {
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TESBzVppYn7xw6", // Live Key fallback
-        amount: total * 100, // Amount in paise
-        currency: "INR",
-        name: "Kadambrayar Onachamayam",
-        description: `${pkg === "dinein" ? "Dine-In Sadhya" : pkg === "delivery" ? "Sadhya at Home" : "Onachamayam Celebration"} Booking`,
-        image: logoImg,
-        handler: function (response: any) {
-          if (response.razorpay_payment_id) {
-            completeBooking(response.razorpay_payment_id);
+      createRazorpayOrderFn({ amount: total * 100 })
+        .then(({ orderId }) => {
+          const options: any = {
+            key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TOWariBI39bJOb", // Production Live Key ID fallback
+            amount: total * 100, // Amount in paise
+            currency: "INR",
+            name: "Kadambrayar Onachamayam",
+            description: `${pkg === "dinein" ? "Dine-In Sadhya" : pkg === "delivery" ? "Sadhya at Home" : "Onachamayam Celebration"} Booking`,
+            image: logoImg,
+            prefill: {
+              name: name.trim(),
+              email: email.trim(),
+              contact: phone.trim(),
+            },
+            notes: {
+              package: pkg,
+              date: date,
+              guests: qty,
+            },
+            theme: {
+              color: "#1E4D3A", // Forest green theme
+            },
+          };
+
+          if (orderId) {
+            options.order_id = orderId;
+            options.handler = function (response: any) {
+              if (response.razorpay_payment_id && response.razorpay_signature) {
+                // Verify signature on backend
+                verifyRazorpayPaymentFn({
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature,
+                })
+                  .then(({ success }) => {
+                    if (success) {
+                      completeBooking(response.razorpay_payment_id);
+                    } else {
+                      showError("Payment verification failed! Invalid security signature. If money was debited, please contact us.");
+                    }
+                  })
+                  .catch((err) => {
+                    console.error("Signature verification error:", err);
+                    showError("An error occurred during payment verification. Please contact support.");
+                  });
+              } else {
+                showError("Payment failed or cancelled. Please try again.");
+              }
+            };
           } else {
-            showError("Payment failed or cancelled. Please try again.");
+            // Fallback to simple flow if server secret is not set up
+            options.handler = function (response: any) {
+              if (response.razorpay_payment_id) {
+                completeBooking(response.razorpay_payment_id);
+              } else {
+                showError("Payment failed or cancelled. Please try again.");
+              }
+            };
           }
-        },
-        prefill: {
-          name: name.trim(),
-          email: email.trim(),
-          contact: phone.trim(),
-        },
-        notes: {
-          package: pkg,
-          date: date,
-          guests: qty,
-        },
-        theme: {
-          color: "#1E4D3A", // Forest green theme
-        },
-      };
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+        })
+        .catch((err) => {
+          console.error("Order creation failed:", err);
+          showError("Failed to initiate payment. Please try again.");
+        });
     } else {
       showError("Payment gateway failed to load. Please check your internet connection and reload the page.");
     }

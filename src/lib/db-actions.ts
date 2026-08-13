@@ -179,3 +179,67 @@ export const saveSettingsFn = createServerFn({ method: "POST" })
       throw new Error("Failed to save settings");
     }
   });
+
+// Create Razorpay Order on the server
+export const createRazorpayOrderFn = createServerFn({ method: "POST" })
+  .validator((d: { amount: number }) => d)
+  .handler(async ({ data }) => {
+    const keyId = process.env.VITE_RAZORPAY_KEY_ID || "rzp_live_TOWariBI39bJOb";
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keySecret) {
+      // Fallback simple mode if secret key is not set
+      return { orderId: null };
+    }
+
+    try {
+      const auth = btoa(`${keyId}:${keySecret}`);
+      const res = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Basic ${auth}`
+        },
+        body: JSON.stringify({
+          amount: data.amount,
+          currency: "INR",
+          receipt: `receipt_${Date.now()}`
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Razorpay order creation failed: ${errText}`);
+      }
+
+      const order = await res.json();
+      return { orderId: order.id };
+    } catch (error) {
+      console.error("Error creating Razorpay order:", error);
+      return { orderId: null };
+    }
+  });
+
+// Verify Razorpay Payment signature on the server
+export const verifyRazorpayPaymentFn = createServerFn({ method: "POST" })
+  .validator((d: { orderId: string; paymentId: string; signature: string }) => d)
+  .handler(async ({ data }) => {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keySecret) {
+      // Bypass if secret key is not set
+      return { success: true };
+    }
+
+    try {
+      const { createHmac } = await import("crypto");
+      const generated = createHmac("sha256", keySecret)
+        .update(`${data.orderId}|${data.paymentId}`)
+        .digest("hex");
+
+      return { success: generated === data.signature };
+    } catch (error) {
+      console.error("Error verifying signature:", error);
+      return { success: false };
+    }
+  });
